@@ -227,6 +227,42 @@ TEMPLATE = Template("""\
   }
   .badge-win { background: rgba(74, 222, 128, 0.15); color: var(--green); }
   .badge-loss { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+  .player-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .player-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+  }
+  .player-btn:hover { border-color: var(--accent); }
+  .player-btn.selected { background: rgba(56, 189, 248, 0.15); border-color: var(--accent); color: var(--accent); }
+  .matchup-result {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-top: 1rem;
+  }
+  .matchup-vs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+  }
+  .matchup-team { font-weight: 600; }
+  .matchup-vs-label { color: var(--muted); font-size: 0.9rem; }
+  .matchup-detail { color: var(--muted); font-size: 0.85rem; text-align: center; }
   @media (max-width: 640px) {
     body { padding: 1rem 0.5rem; }
     th, td { padding: 0.4rem; font-size: 0.8rem; }
@@ -348,6 +384,94 @@ TEMPLATE = Template("""\
   </tbody>
 </table>
 
+<h2>Anbefalet Holdopstilling</h2>
+<p class="subtitle">Vælg 4 spillere for at få den mest balancerede kamp</p>
+<div class="player-grid" id="player-grid"></div>
+<div id="matchup-result"></div>
+
+<script>
+const elo = {{ elo_json }};
+const pairCounts = {{ pair_counts_json }};
+const grid = document.getElementById('player-grid');
+const result = document.getElementById('matchup-result');
+const selected = new Set();
+
+function pairKey(a, b) {
+  return [a, b].sort().join(' & ');
+}
+
+Object.keys(elo).sort().forEach(name => {
+  const btn = document.createElement('button');
+  btn.className = 'player-btn';
+  btn.textContent = name;
+  btn.addEventListener('click', () => {
+    if (selected.has(name)) {
+      selected.delete(name);
+      btn.classList.remove('selected');
+    } else if (selected.size < 4) {
+      selected.add(name);
+      btn.classList.add('selected');
+    }
+    if (selected.size === 4) recommend();
+    else result.innerHTML = '';
+  });
+  grid.appendChild(btn);
+});
+
+function recommend() {
+  const players = [...selected];
+  const pairings = [
+    [[players[0], players[1]], [players[2], players[3]]],
+    [[players[0], players[2]], [players[1], players[3]]],
+    [[players[0], players[3]], [players[1], players[2]]],
+  ];
+
+  // Score each pairing: lower is better
+  // Novelty: prefer pairs that have played together fewer times
+  // Balance: prefer close Elo matchups
+  const scored = pairings.map(([teamA, teamB]) => {
+    const eloA = (elo[teamA[0]] + elo[teamA[1]]) / 2;
+    const eloB = (elo[teamB[0]] + elo[teamB[1]]) / 2;
+    const eloDiff = Math.abs(eloA - eloB);
+
+    const pairsPlayed = (pairCounts[pairKey(teamA[0], teamA[1])] || 0)
+                      + (pairCounts[pairKey(teamB[0], teamB[1])] || 0);
+
+    // Combine: novelty (games played * 20) + elo difference
+    const score = pairsPlayed * 20 + eloDiff;
+    const newPairs = [
+      (pairCounts[pairKey(teamA[0], teamA[1])] || 0) === 0 ? pairKey(teamA[0], teamA[1]) : null,
+      (pairCounts[pairKey(teamB[0], teamB[1])] || 0) === 0 ? pairKey(teamB[0], teamB[1]) : null,
+    ].filter(Boolean);
+
+    return { teamA, teamB, eloA, eloB, eloDiff, pairsPlayed, newPairs, score };
+  });
+
+  scored.sort((a, b) => a.score - b.score);
+  const best = scored[0];
+
+  const winProb = (1 / (1 + Math.pow(10, (best.eloB - best.eloA) / 400)) * 100).toFixed(0);
+  const noveltyNote = best.newPairs.length > 0
+    ? `Nyt makkerpar: ${best.newPairs.join(', ')}`
+    : '';
+
+  result.innerHTML = `
+    <div class="matchup-result">
+      <div class="matchup-vs">
+        <span class="matchup-team">${best.teamA.join(' & ')}</span>
+        <span class="matchup-vs-label">vs</span>
+        <span class="matchup-team">${best.teamB.join(' & ')}</span>
+      </div>
+      <div class="matchup-detail">
+        Elo: ${Math.round(best.eloA)} vs ${Math.round(best.eloB)}
+        &middot; ${best.teamA.join(' & ')}: ${winProb}%
+        ${noveltyNote ? '<br>' + noveltyNote : ''}
+      </div>
+    </div>
+  `;
+}
+</script>
+
 </body>
 </html>
 """)
@@ -364,7 +488,15 @@ def main():
     pairs = compute_pair_stats(matches)
 
     os.makedirs("dist", exist_ok=True)
-    html = TEMPLATE.render(matches=matches, leaderboard=leaderboard, elo=elo, pairs=pairs)
+    elo_dict = {p["name"]: p["elo"] for p in elo}
+    # Build pair history: how many times each pair has played together
+    pair_counts = {}
+    for p in pairs:
+        pair_counts[p["players"]] = p["played"]
+    html = TEMPLATE.render(matches=matches, leaderboard=leaderboard, elo=elo,
+                           elo_json=json.dumps(elo_dict),
+                           pair_counts_json=json.dumps(pair_counts),
+                           pairs=pairs)
     with open("dist/index.html", "w") as f:
         f.write(html)
     print("Generated dist/index.html")
