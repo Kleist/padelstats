@@ -307,6 +307,9 @@ TEMPLATE = Template("""\
   .matchup-team { font-weight: 600; }
   .matchup-vs-label { color: var(--muted); font-size: 0.9rem; }
   .matchup-detail { color: var(--muted); font-size: 0.85rem; text-align: center; }
+  .matchup-result + .matchup-result { margin-top: 0.75rem; opacity: 0.5; }
+  .matchup-result.recommended { border-color: var(--accent); }
+  .matchup-badge { color: var(--accent); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-align: center; }
   @media (max-width: 640px) {
     body { padding: 1rem 0.5rem; }
     th, td { padding: 0.4rem; font-size: 0.8rem; }
@@ -502,27 +505,29 @@ function recommend() {
   });
 
   scored.sort((a, b) => a.score - b.score);
-  const best = scored[0];
 
-  const winProb = (1 / (1 + Math.pow(10, (best.eloB - best.eloA) / 400)) * 100).toFixed(0);
-  const noveltyNote = best.newPairs.length > 0
-    ? `Nyt makkerpar: ${best.newPairs.join(', ')}`
-    : '';
-
-  result.innerHTML = `
-    <div class="matchup-result">
-      <div class="matchup-vs">
-        <span class="matchup-team">${best.teamA.join(' & ')}</span>
-        <span class="matchup-vs-label">vs</span>
-        <span class="matchup-team">${best.teamB.join(' & ')}</span>
+  result.innerHTML = scored.map((m, i) => {
+    const winProb = (1 / (1 + Math.pow(10, (m.eloB - m.eloA) / 400)) * 100).toFixed(0);
+    const noveltyNote = m.newPairs.length > 0
+      ? `Nyt makkerpar: ${m.newPairs.join(', ')}`
+      : '';
+    const recommended = i === 0 ? ' recommended' : '';
+    return `
+      <div class="matchup-result${recommended}">
+        ${i === 0 ? '<div class="matchup-badge">Anbefalet</div>' : ''}
+        <div class="matchup-vs">
+          <span class="matchup-team">${m.teamA.join(' & ')}</span>
+          <span class="matchup-vs-label">vs</span>
+          <span class="matchup-team">${m.teamB.join(' & ')}</span>
+        </div>
+        <div class="matchup-detail">
+          Elo: ${Math.round(m.eloA)} vs ${Math.round(m.eloB)}
+          &middot; ${m.teamA.join(' & ')}: ${winProb}%
+          ${noveltyNote ? '<br>' + noveltyNote : ''}
+        </div>
       </div>
-      <div class="matchup-detail">
-        Elo: ${Math.round(best.eloA)} vs ${Math.round(best.eloB)}
-        &middot; ${best.teamA.join(' & ')}: ${winProb}%
-        ${noveltyNote ? '<br>' + noveltyNote : ''}
-      </div>
-    </div>
-  `;
+    `;
+  }).join('');
 }
 </script>
 
