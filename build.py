@@ -108,6 +108,34 @@ def compute_player_stats(matches):
     return leaderboard
 
 
+def compute_elo(matches, k=32, initial=1500):
+    """Compute individual Elo ratings from doubles matches.
+
+    Team strength = average of two players' ratings.
+    Both players on each side are updated equally.
+    """
+    ratings = defaultdict(lambda: initial)
+
+    for m in matches:
+        if m["winner"] == "draw":
+            continue
+        team_a_rating = (ratings[m["team_a"][0]] + ratings[m["team_a"][1]]) / 2
+        team_b_rating = (ratings[m["team_b"][0]] + ratings[m["team_b"][1]]) / 2
+
+        expected_a = 1 / (1 + 10 ** ((team_b_rating - team_a_rating) / 400))
+        actual_a = 1.0 if m["winner"] == "A" else 0.0
+
+        delta = k * (actual_a - expected_a)
+        for player in m["team_a"]:
+            ratings[player] += delta
+        for player in m["team_b"]:
+            ratings[player] -= delta
+
+    result = [{"name": p, "elo": round(r)} for p, r in ratings.items()]
+    result.sort(key=lambda x: -x["elo"])
+    return result
+
+
 def compute_pair_stats(matches):
     """Compute stats for each player pair (partnership)."""
     pairs = defaultdict(lambda: {"played": 0, "won": 0, "lost": 0})
@@ -240,6 +268,26 @@ TEMPLATE = Template("""\
   </tbody>
 </table>
 
+<h2>Elo Rating</h2>
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Spiller</th>
+      <th>Elo</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in elo %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td><strong>{{ p.name }}</strong></td>
+      <td class="pct">{{ p.elo }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
 <h2>Makkerpar</h2>
 <table>
   <thead>
@@ -312,10 +360,11 @@ def main():
     print(f"Parsed {len(matches)} matches")
 
     leaderboard = compute_player_stats(matches)
+    elo = compute_elo(matches)
     pairs = compute_pair_stats(matches)
 
     os.makedirs("dist", exist_ok=True)
-    html = TEMPLATE.render(matches=matches, leaderboard=leaderboard, pairs=pairs)
+    html = TEMPLATE.render(matches=matches, leaderboard=leaderboard, elo=elo, pairs=pairs)
     with open("dist/index.html", "w") as f:
         f.write(html)
     print("Generated dist/index.html")
