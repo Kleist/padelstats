@@ -72,16 +72,21 @@ def compute_player_stats(matches):
     stats = defaultdict(lambda: {
         "matches_played": 0, "matches_won": 0, "matches_lost": 0,
         "sets_won": 0, "sets_lost": 0, "games_won": 0, "games_lost": 0,
+        "current_streak": 0, "best_streak": 0,
     })
 
     for m in matches:
         for player in m["team_a"]:
             s = stats[player]
             s["matches_played"] += 1
-            if m["winner"] == "A":
+            won = m["winner"] == "A"
+            if won:
                 s["matches_won"] += 1
+                s["current_streak"] += 1
+                s["best_streak"] = max(s["best_streak"], s["current_streak"])
             elif m["winner"] == "B":
                 s["matches_lost"] += 1
+                s["current_streak"] = 0
             s["sets_won"] += m["sets_won"][0]
             s["sets_lost"] += m["sets_won"][1]
             s["games_won"] += m["games"][0]
@@ -90,10 +95,14 @@ def compute_player_stats(matches):
         for player in m["team_b"]:
             s = stats[player]
             s["matches_played"] += 1
-            if m["winner"] == "B":
+            won = m["winner"] == "B"
+            if won:
                 s["matches_won"] += 1
+                s["current_streak"] += 1
+                s["best_streak"] = max(s["best_streak"], s["current_streak"])
             elif m["winner"] == "A":
                 s["matches_lost"] += 1
+                s["current_streak"] = 0
             s["sets_won"] += m["sets_won"][1]
             s["sets_lost"] += m["sets_won"][0]
             s["games_won"] += m["games"][1]
@@ -131,7 +140,26 @@ def compute_elo(matches, k=32, initial=1500):
         for player in m["team_b"]:
             ratings[player] -= delta
 
-    result = [{"name": p, "elo": round(r)} for p, r in ratings.items()]
+    # Compute strength of schedule: average opponent and partner Elo
+    opp_elos = defaultdict(list)
+    partner_elos = defaultdict(list)
+    for m in matches:
+        if m["winner"] == "draw":
+            continue
+        for player in m["team_a"]:
+            partner = [p for p in m["team_a"] if p != player][0]
+            opp_elos[player].append((ratings[m["team_b"][0]] + ratings[m["team_b"][1]]) / 2)
+            partner_elos[player].append(ratings[partner])
+        for player in m["team_b"]:
+            partner = [p for p in m["team_b"] if p != player][0]
+            opp_elos[player].append((ratings[m["team_a"][0]] + ratings[m["team_a"][1]]) / 2)
+            partner_elos[player].append(ratings[partner])
+
+    result = []
+    for p, r in ratings.items():
+        avg_opp = round(sum(opp_elos[p]) / len(opp_elos[p])) if opp_elos[p] else initial
+        avg_partner = round(sum(partner_elos[p]) / len(partner_elos[p])) if partner_elos[p] else initial
+        result.append({"name": p, "elo": round(r), "avg_opp": avg_opp, "avg_partner": avg_partner})
     result.sort(key=lambda x: -x["elo"])
     return result
 
@@ -212,6 +240,7 @@ TEMPLATE = Template("""\
     border-bottom: 1px solid var(--border);
   }
   th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  th[title] { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
   tr:hover { background: rgba(56, 189, 248, 0.05); }
   .win { color: var(--green); font-weight: 600; }
   .loss { color: var(--red); font-weight: 600; }
@@ -286,6 +315,8 @@ TEMPLATE = Template("""\
       <th>V%</th>
       <th>Sæt</th>
       <th>Gems</th>
+      <th>Streak</th>
+      <th>Bedste</th>
     </tr>
   </thead>
   <tbody>
@@ -299,6 +330,8 @@ TEMPLATE = Template("""\
       <td class="pct">{{ "%.0f"|format(p.win_pct) }}%</td>
       <td>{{ p.sets_won }}-{{ p.sets_lost }}</td>
       <td>{{ p.games_won }}-{{ p.games_lost }}</td>
+      <td>{% if p.current_streak > 0 %}<span class="win">{{ p.current_streak }}V</span>{% else %}-{% endif %}</td>
+      <td>{{ p.best_streak }}V</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -310,7 +343,9 @@ TEMPLATE = Template("""\
     <tr>
       <th>#</th>
       <th>Spiller</th>
-      <th>Elo</th>
+      <th title="Individuel styrke estimeret fra holdresultater. Starter på 1500. Højere = stærkere.">Elo</th>
+      <th title="Gennemsnitlig Elo for modstanderholdet. Højere = sværere modstandere.">Gns. Modst.</th>
+      <th title="Gennemsnitlig Elo for makkeren. Lavere = mere selvstændigt optjent rating.">Gns. Makker</th>
     </tr>
   </thead>
   <tbody>
@@ -319,6 +354,8 @@ TEMPLATE = Template("""\
       <td>{{ loop.index }}</td>
       <td><strong>{{ p.name }}</strong></td>
       <td class="pct">{{ p.elo }}</td>
+      <td class="muted">{{ p.avg_opp }}</td>
+      <td class="muted">{{ p.avg_partner }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -385,7 +422,7 @@ TEMPLATE = Template("""\
 </table>
 
 <h2>Anbefalet Holdopstilling</h2>
-<p class="subtitle">Vælg 4 spillere for at få den mest balancerede kamp</p>
+<p class="subtitle">Vælg dagens 4 spillere og få forslag til makkerpar</p>
 <div class="player-grid" id="player-grid"></div>
 <div id="matchup-result"></div>
 
