@@ -72,7 +72,7 @@ def compute_player_stats(matches):
     stats = defaultdict(lambda: {
         "matches_played": 0, "matches_won": 0, "matches_lost": 0,
         "sets_won": 0, "sets_lost": 0, "games_won": 0, "games_lost": 0,
-        "current_streak": 0, "best_streak": 0,
+        "current_win_streak": 0, "best_streak": 0, "current_lose_streak": 0,
     })
 
     for m in matches:
@@ -82,11 +82,13 @@ def compute_player_stats(matches):
             won = m["winner"] == "A"
             if won:
                 s["matches_won"] += 1
-                s["current_streak"] += 1
-                s["best_streak"] = max(s["best_streak"], s["current_streak"])
+                s["current_win_streak"] += 1
+                s["current_lose_streak"] = 0
+                s["best_streak"] = max(s["best_streak"], s["current_win_streak"])
             elif m["winner"] == "B":
                 s["matches_lost"] += 1
-                s["current_streak"] = 0
+                s["current_lose_streak"] += 1
+                s["current_win_streak"] = 0
             s["sets_won"] += m["sets_won"][0]
             s["sets_lost"] += m["sets_won"][1]
             s["games_won"] += m["games"][0]
@@ -98,11 +100,13 @@ def compute_player_stats(matches):
             won = m["winner"] == "B"
             if won:
                 s["matches_won"] += 1
-                s["current_streak"] += 1
-                s["best_streak"] = max(s["best_streak"], s["current_streak"])
+                s["current_win_streak"] += 1
+                s["current_lose_streak"] = 0
+                s["best_streak"] = max(s["best_streak"], s["current_win_streak"])
             elif m["winner"] == "A":
                 s["matches_lost"] += 1
-                s["current_streak"] = 0
+                s["current_lose_streak"] += 1
+                s["current_win_streak"] = 0
             s["sets_won"] += m["sets_won"][1]
             s["sets_lost"] += m["sets_won"][0]
             s["games_won"] += m["games"][1]
@@ -330,7 +334,7 @@ TEMPLATE = Template("""\
       <td class="pct">{{ "%.0f"|format(p.win_pct) }}%</td>
       <td>{{ p.sets_won }}-{{ p.sets_lost }}</td>
       <td>{{ p.games_won }}-{{ p.games_lost }}</td>
-      <td>{% if p.current_streak > 0 %}<span class="win">{{ p.current_streak }}V</span>{% else %}-{% endif %}</td>
+      <td>{% if p.current_win_streak > 0 %}<span class="win">{{ p.current_win_streak }}V</span>{% elif p.current_lose_streak > 0 %}<span class="loss">{{ p.current_lose_streak }}T</span>{% else %}-{% endif %}</td>
       <td>{{ p.best_streak }}V</td>
     </tr>
     {% endfor %}
