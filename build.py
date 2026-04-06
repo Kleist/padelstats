@@ -444,7 +444,7 @@ TEMPLATE = Template("""\
 <h2>Anbefalet Holdopstilling</h2>
 <p class="subtitle">Vælg dagens 4 spillere og få forslag til makkerpar</p>
 <div class="player-grid" id="player-grid"></div>
-<div id="matchup-result"></div>
+<div id="matchup-result" style="min-height: 320px;"></div>
 
 <script>
 const elo = {{ elo_json }};
