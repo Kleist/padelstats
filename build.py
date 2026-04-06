@@ -73,6 +73,7 @@ def compute_player_stats(matches):
         "matches_played": 0, "matches_won": 0, "matches_lost": 0,
         "sets_won": 0, "sets_lost": 0, "games_won": 0, "games_lost": 0,
         "current_win_streak": 0, "best_streak": 0, "current_lose_streak": 0,
+        "eggs_given": 0, "eggs_received": 0,
     })
 
     for m in matches:
@@ -93,6 +94,11 @@ def compute_player_stats(matches):
             s["sets_lost"] += m["sets_won"][1]
             s["games_won"] += m["games"][0]
             s["games_lost"] += m["games"][1]
+            for sa, sb in m["sets"]:
+                if sa == 6 and sb == 0:
+                    s["eggs_given"] += 1
+                elif sa == 0 and sb == 6:
+                    s["eggs_received"] += 1
 
         for player in m["team_b"]:
             s = stats[player]
@@ -111,6 +117,11 @@ def compute_player_stats(matches):
             s["sets_lost"] += m["sets_won"][0]
             s["games_won"] += m["games"][1]
             s["games_lost"] += m["games"][0]
+            for sa, sb in m["sets"]:
+                if sb == 6 and sa == 0:
+                    s["eggs_given"] += 1
+                elif sb == 0 and sa == 6:
+                    s["eggs_received"] += 1
 
     # Compute win rate and sort
     leaderboard = []
@@ -319,6 +330,7 @@ TEMPLATE = Template("""\
       <th>V%</th>
       <th>Sæt</th>
       <th>Partier</th>
+      <th title="Antal 6-0 sæt givet / modtaget">Æg</th>
       <th>Streak</th>
       <th>Bedste</th>
     </tr>
@@ -334,6 +346,7 @@ TEMPLATE = Template("""\
       <td class="pct">{{ "%.0f"|format(p.win_pct) }}%</td>
       <td>{{ p.sets_won }}-{{ p.sets_lost }}</td>
       <td>{{ p.games_won }}-{{ p.games_lost }}</td>
+      <td><span class="win">{{ p.eggs_given }}</span> / <span class="loss">{{ p.eggs_received }}</span></td>
       <td>{% if p.current_win_streak > 0 %}<span class="win">{{ p.current_win_streak }}V</span>{% elif p.current_lose_streak > 0 %}<span class="loss">{{ p.current_lose_streak }}T</span>{% else %}-{% endif %}</td>
       <td>{{ p.best_streak }}V</td>
     </tr>
