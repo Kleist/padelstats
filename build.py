@@ -314,7 +314,7 @@ TEMPLATE = Template("""\
       <th>T</th>
       <th>V%</th>
       <th>Sæt</th>
-      <th>Gems</th>
+      <th>Partier</th>
       <th>Streak</th>
       <th>Bedste</th>
     </tr>
