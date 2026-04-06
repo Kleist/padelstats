@@ -40,8 +40,11 @@ def parse_matches(rows):
             except (ValueError, IndexError):
                 break
 
-        sets_won_a = sum(1 for sa, sb in sets if sa > sb)
-        sets_won_b = sum(1 for sa, sb in sets if sb > sa)
+        def is_set_won(winner_score, loser_score):
+            return winner_score == 7 or (winner_score == 6 and loser_score <= 4)
+
+        sets_won_a = sum(1 for sa, sb in sets if is_set_won(sa, sb))
+        sets_won_b = sum(1 for sa, sb in sets if is_set_won(sb, sa))
         games_a = sum(sa for sa, sb in sets)
         games_b = sum(sb for sa, sb in sets)
 
