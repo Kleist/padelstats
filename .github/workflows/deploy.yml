@@ -33,7 +33,13 @@ jobs:
         run: pip install poetry
 
       - name: Install dependencies
-        run: poetry install --no-root
+        run: poetry install --no-root --extras dev
+
+      - name: Lint
+        run: poetry run ruff check .
+
+      - name: Test
+        run: poetry run pytest
 
       - name: Build site
         env:
