@@ -149,8 +149,11 @@ def compute_elo(matches, k=32, initial=1500):
 
     Team strength = average of two players' ratings.
     Both players on each side are updated equally.
+    Returns (results, elo_history) where elo_history maps player name to list
+    of {date, date_sortable, elo, won} entries.
     """
     ratings = defaultdict(lambda: initial)
+    elo_history = defaultdict(list)
 
     for m in matches:
         if m["winner"] == "draw":
@@ -164,8 +167,16 @@ def compute_elo(matches, k=32, initial=1500):
         delta = k * (actual_a - expected_a)
         for player in m["team_a"]:
             ratings[player] += delta
+            elo_history[player].append({
+                "date": m["date"], "date_sortable": m["date_sortable"],
+                "elo": round(ratings[player]), "won": m["winner"] == "A",
+            })
         for player in m["team_b"]:
             ratings[player] -= delta
+            elo_history[player].append({
+                "date": m["date"], "date_sortable": m["date_sortable"],
+                "elo": round(ratings[player]), "won": m["winner"] == "B",
+            })
 
     # Compute strength of schedule: average opponent and partner Elo
     opp_elos = defaultdict(list)
@@ -188,7 +199,7 @@ def compute_elo(matches, k=32, initial=1500):
         avg_partner = round(sum(partner_elos[p]) / len(partner_elos[p])) if partner_elos[p] else initial
         result.append({"name": p, "elo": round(r), "avg_opp": avg_opp, "avg_partner": avg_partner})
     result.sort(key=lambda x: -x["elo"])
-    return result
+    return result, elo_history
 
 
 def compute_pair_stats(matches):
@@ -326,6 +337,31 @@ TEMPLATE = Template("""\
   .matchup-result + .matchup-result { margin-top: 0.75rem; opacity: 0.5; }
   .matchup-result.recommended { border-color: var(--accent); }
   .matchup-badge { color: var(--accent); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-align: center; }
+  .player-link { color: var(--text); cursor: pointer; text-decoration: none; border-bottom: 1px dashed var(--muted); }
+  .player-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  #elo-chart-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-top: 1rem;
+    display: none;
+    position: relative;
+  }
+  #elo-chart-container.visible { display: block; }
+  #elo-chart-title { font-weight: 600; margin-bottom: 0.75rem; }
+  #elo-chart-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+  #elo-chart-close:hover { color: var(--text); }
+  #elo-chart { width: 100%; }
   @media (max-width: 640px) {
     body { padding: 1rem 0.5rem; }
     th, td { padding: 0.4rem; font-size: 0.8rem; }
@@ -358,7 +394,7 @@ TEMPLATE = Template("""\
     {% for p in leaderboard %}
     <tr>
       <td>{{ loop.index }}</td>
-      <td><strong>{{ p.name }}</strong></td>
+      <td><strong><a class="player-link" data-player="{{ p.name }}">{{ p.name }}</a></strong></td>
       <td data-sort="{{ p.matches_played }}">{{ p.matches_played }}</td>
       <td class="win" data-sort="{{ p.matches_won }}">{{ p.matches_won }}</td>
       <td class="loss" data-sort="{{ p.matches_lost }}">{{ p.matches_lost }}</td>
@@ -388,7 +424,7 @@ TEMPLATE = Template("""\
     {% for p in elo %}
     <tr>
       <td>{{ loop.index }}</td>
-      <td><strong>{{ p.name }}</strong></td>
+      <td><strong><a class="player-link" data-player="{{ p.name }}">{{ p.name }}</a></strong></td>
       <td class="pct" data-sort="{{ p.elo }}">{{ p.elo }}</td>
       <td class="muted" data-sort="{{ p.avg_opp }}">{{ p.avg_opp }}</td>
       <td class="muted" data-sort="{{ p.avg_partner }}">{{ p.avg_partner }}</td>
@@ -396,6 +432,12 @@ TEMPLATE = Template("""\
     {% endfor %}
   </tbody>
 </table>
+
+<div id="elo-chart-container">
+  <button id="elo-chart-close">&times;</button>
+  <div id="elo-chart-title"></div>
+  <canvas id="elo-chart" height="300"></canvas>
+</div>
 
 <h2>Makkerpar</h2>
 <table>
@@ -465,6 +507,7 @@ TEMPLATE = Template("""\
 <script>
 const elo = {{ elo_json }};
 const pairCounts = {{ pair_counts_json }};
+const eloHistory = {{ elo_history_json }};
 const grid = document.getElementById('player-grid');
 const result = document.getElementById('matchup-result');
 const selected = new Set();
@@ -587,6 +630,118 @@ document.querySelectorAll('table').forEach(table => {
     });
   });
 });
+
+// Elo chart
+(function() {
+  const container = document.getElementById('elo-chart-container');
+  const canvas = document.getElementById('elo-chart');
+  const titleEl = document.getElementById('elo-chart-title');
+  const closeBtn = document.getElementById('elo-chart-close');
+
+  closeBtn.addEventListener('click', () => container.classList.remove('visible'));
+
+  function drawChart(playerName) {
+    const data = eloHistory[playerName];
+    if (!data || data.length === 0) return;
+
+    container.classList.add('visible');
+    titleEl.textContent = `Elo-udvikling: ${playerName}`;
+    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = 300 * dpr;
+    canvas.style.height = '300px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    const W = rect.width;
+    const H = 300;
+
+    const pad = { top: 20, right: 20, bottom: 40, left: 50 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    const elos = data.map(d => d.elo);
+    let minElo = Math.min(...elos, 1500);
+    let maxElo = Math.max(...elos, 1500);
+    const range = maxElo - minElo || 100;
+    minElo -= range * 0.1;
+    maxElo += range * 0.1;
+
+    function x(i) { return pad.left + (data.length === 1 ? plotW / 2 : (i / (data.length - 1)) * plotW); }
+    function y(v) { return pad.top + plotH - ((v - minElo) / (maxElo - minElo)) * plotH; }
+
+    // Clear
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid lines
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 0.5;
+    const steps = 5;
+    for (let i = 0; i <= steps; i++) {
+      const val = minElo + (maxElo - minElo) * (i / steps);
+      const yy = y(val);
+      ctx.beginPath();
+      ctx.moveTo(pad.left, yy);
+      ctx.lineTo(W - pad.right, yy);
+      ctx.stroke();
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px -apple-system, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(Math.round(val), pad.left - 8, yy + 4);
+    }
+
+    // 1500 baseline
+    if (minElo < 1500 && maxElo > 1500) {
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(pad.left, y(1500));
+      ctx.lineTo(W - pad.right, y(1500));
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Line
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    data.forEach((d, i) => {
+      const px = x(i), py = y(d.elo);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+
+    // Points (win=green, loss=red)
+    data.forEach((d, i) => {
+      const px = x(i), py = y(d.elo);
+      ctx.beginPath();
+      ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = d.won ? '#4ade80' : '#f87171';
+      ctx.fill();
+    });
+
+    // X-axis date labels (show ~6 evenly spaced)
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    const labelCount = Math.min(data.length, 6);
+    for (let i = 0; i < labelCount; i++) {
+      const idx = data.length === 1 ? 0 : Math.round(i * (data.length - 1) / (labelCount - 1));
+      ctx.fillText(data[idx].date, x(idx), H - pad.bottom + 16);
+    }
+  }
+
+  document.querySelectorAll('.player-link').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      drawChart(link.dataset.player);
+    });
+  });
+})();
 </script>
 
 </body>
@@ -601,7 +756,7 @@ def main():
     print(f"Parsed {len(matches)} matches")
 
     leaderboard = compute_player_stats(matches)
-    elo = compute_elo(matches)
+    elo, elo_history = compute_elo(matches)
     pairs = compute_pair_stats(matches)
 
     os.makedirs("dist", exist_ok=True)
@@ -613,6 +768,7 @@ def main():
     html = TEMPLATE.render(matches=matches, leaderboard=leaderboard, elo=elo,
                            elo_json=json.dumps(elo_dict),
                            pair_counts_json=json.dumps(pair_counts),
+                           elo_history_json=json.dumps(dict(elo_history)),
                            pairs=pairs)
     with open("dist/index.html", "w") as f:
         f.write(html)
