@@ -1,0 +1,33 @@
+name: PR Preview Build
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-root
+
+      - name: Build site
+        env:
+          GOOGLE_SHEETS_API_KEY: ${{ secrets.GOOGLE_SHEETS_API_KEY }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: poetry run python build.py
+
+      - name: Upload preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-preview
+          path: dist
