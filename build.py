@@ -339,6 +339,7 @@ TEMPLATE = Template("""\
   .matchup-badge { color: var(--accent); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-align: center; }
   .player-link { color: var(--text); cursor: pointer; text-decoration: none; border-bottom: 1px dashed var(--muted); }
   .player-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  .player-link.chart-active { border-bottom-style: solid; border-bottom-width: 2px; }
   #elo-chart-container {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -349,16 +350,18 @@ TEMPLATE = Template("""\
     position: relative;
   }
   #elo-chart-container.visible { display: block; }
-  #elo-chart-title { font-weight: 600; margin-bottom: 0.75rem; }
+  #elo-chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+  #elo-chart-title { font-weight: 600; }
+  #elo-chart-legend { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.5rem; font-size: 0.85rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.35rem; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
   #elo-chart-close {
-    position: absolute;
-    top: 0.75rem;
-    right: 1rem;
     background: none;
     border: none;
     color: var(--muted);
     font-size: 1.2rem;
     cursor: pointer;
+    padding: 0 0.25rem;
   }
   #elo-chart-close:hover { color: var(--text); }
   #elo-chart { width: 100%; }
@@ -434,8 +437,11 @@ TEMPLATE = Template("""\
 </table>
 
 <div id="elo-chart-container">
-  <button id="elo-chart-close">&times;</button>
-  <div id="elo-chart-title"></div>
+  <div id="elo-chart-header">
+    <div id="elo-chart-title">Elo-udvikling</div>
+    <button id="elo-chart-close">&times;</button>
+  </div>
+  <div id="elo-chart-legend"></div>
   <canvas id="elo-chart" height="300"></canvas>
 </div>
 
@@ -631,23 +637,78 @@ document.querySelectorAll('table').forEach(table => {
   });
 });
 
-// Elo chart
+// Elo chart — multi-player toggle
 (function() {
   const container = document.getElementById('elo-chart-container');
   const canvas = document.getElementById('elo-chart');
-  const titleEl = document.getElementById('elo-chart-title');
+  const legendEl = document.getElementById('elo-chart-legend');
   const closeBtn = document.getElementById('elo-chart-close');
+  const colors = ['#38bdf8', '#fbbf24', '#4ade80', '#f87171', '#a78bfa', '#fb923c', '#2dd4bf', '#f472b6'];
+  const chartPlayers = new Map(); // name -> colorIndex
 
-  closeBtn.addEventListener('click', () => container.classList.remove('visible'));
+  closeBtn.addEventListener('click', () => {
+    chartPlayers.clear();
+    container.classList.remove('visible');
+    document.querySelectorAll('.player-link.chart-active').forEach(l => {
+      l.classList.remove('chart-active');
+      l.style.borderBottomColor = '';
+    });
+  });
 
-  function drawChart(playerName) {
-    const data = eloHistory[playerName];
-    if (!data || data.length === 0) return;
+  function togglePlayer(name) {
+    if (chartPlayers.has(name)) {
+      chartPlayers.delete(name);
+      document.querySelectorAll(`.player-link[data-player="${name}"]`).forEach(l => {
+        l.classList.remove('chart-active');
+        l.style.borderBottomColor = '';
+      });
+    } else {
+      // Assign next available color
+      const used = new Set(chartPlayers.values());
+      let ci = 0;
+      while (used.has(ci) && ci < colors.length) ci++;
+      chartPlayers.set(name, ci);
+      const color = colors[ci % colors.length];
+      document.querySelectorAll(`.player-link[data-player="${name}"]`).forEach(l => {
+        l.classList.add('chart-active');
+        l.style.borderBottomColor = color;
+      });
+    }
 
+    if (chartPlayers.size === 0) {
+      container.classList.remove('visible');
+      return;
+    }
     container.classList.add('visible');
-    titleEl.textContent = `Elo-udvikling: ${playerName}`;
+    drawChart();
     container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 
+  function drawChart() {
+    const players = [...chartPlayers.keys()];
+
+    // Build unified date axis from all selected players
+    const dateMap = new Map(); // date_sortable -> display date
+    players.forEach(name => {
+      (eloHistory[name] || []).forEach(d => {
+        if (!dateMap.has(d.date_sortable)) dateMap.set(d.date_sortable, d.date);
+      });
+    });
+    const allDates = [...dateMap.keys()].sort();
+    const dateIndex = new Map(allDates.map((d, i) => [d, i]));
+
+    // Compute Y range across all selected players
+    let allElos = [1500];
+    players.forEach(name => {
+      (eloHistory[name] || []).forEach(d => allElos.push(d.elo));
+    });
+    let minElo = Math.min(...allElos);
+    let maxElo = Math.max(...allElos);
+    const range = maxElo - minElo || 100;
+    minElo -= range * 0.1;
+    maxElo += range * 0.1;
+
+    // Canvas setup
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr;
@@ -661,26 +722,18 @@ document.querySelectorAll('table').forEach(table => {
     const pad = { top: 20, right: 20, bottom: 40, left: 50 };
     const plotW = W - pad.left - pad.right;
     const plotH = H - pad.top - pad.bottom;
+    const n = allDates.length;
 
-    const elos = data.map(d => d.elo);
-    let minElo = Math.min(...elos, 1500);
-    let maxElo = Math.max(...elos, 1500);
-    const range = maxElo - minElo || 100;
-    minElo -= range * 0.1;
-    maxElo += range * 0.1;
-
-    function x(i) { return pad.left + (data.length === 1 ? plotW / 2 : (i / (data.length - 1)) * plotW); }
+    function x(i) { return pad.left + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW); }
     function y(v) { return pad.top + plotH - ((v - minElo) / (maxElo - minElo)) * plotH; }
 
-    // Clear
     ctx.clearRect(0, 0, W, H);
 
     // Grid lines
     ctx.strokeStyle = '#334155';
     ctx.lineWidth = 0.5;
-    const steps = 5;
-    for (let i = 0; i <= steps; i++) {
-      const val = minElo + (maxElo - minElo) * (i / steps);
+    for (let i = 0; i <= 5; i++) {
+      const val = minElo + (maxElo - minElo) * (i / 5);
       const yy = y(val);
       ctx.beginPath();
       ctx.moveTo(pad.left, yy);
@@ -704,41 +757,57 @@ document.querySelectorAll('table').forEach(table => {
       ctx.setLineDash([]);
     }
 
-    // Line
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    data.forEach((d, i) => {
-      const px = x(i), py = y(d.elo);
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    });
-    ctx.stroke();
+    // Draw each player's line and points
+    players.forEach(name => {
+      const data = eloHistory[name] || [];
+      const color = colors[chartPlayers.get(name) % colors.length];
 
-    // Points (win=green, loss=red)
-    data.forEach((d, i) => {
-      const px = x(i), py = y(d.elo);
+      // Line
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(px, py, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = d.won ? '#4ade80' : '#f87171';
-      ctx.fill();
+      data.forEach((d, i) => {
+        const px = x(dateIndex.get(d.date_sortable));
+        const py = y(d.elo);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+
+      // Points
+      data.forEach(d => {
+        const px = x(dateIndex.get(d.date_sortable));
+        const py = y(d.elo);
+        ctx.beginPath();
+        ctx.arc(px, py, 3, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      });
     });
 
-    // X-axis date labels (show ~6 evenly spaced)
+    // X-axis date labels
     ctx.fillStyle = '#94a3b8';
     ctx.font = '10px -apple-system, sans-serif';
     ctx.textAlign = 'center';
-    const labelCount = Math.min(data.length, 6);
+    const labelCount = Math.min(n, 6);
     for (let i = 0; i < labelCount; i++) {
-      const idx = data.length === 1 ? 0 : Math.round(i * (data.length - 1) / (labelCount - 1));
-      ctx.fillText(data[idx].date, x(idx), H - pad.bottom + 16);
+      const idx = n === 1 ? 0 : Math.round(i * (n - 1) / (labelCount - 1));
+      ctx.fillText(dateMap.get(allDates[idx]), x(idx), H - pad.bottom + 16);
     }
+
+    // Legend
+    legendEl.innerHTML = players.map(name => {
+      const color = colors[chartPlayers.get(name) % colors.length];
+      const data = eloHistory[name] || [];
+      const current = data.length ? data[data.length - 1].elo : '?';
+      return `<span class="legend-item"><span class="legend-swatch" style="background:${color}"></span>${name} (${current})</span>`;
+    }).join('');
   }
 
   document.querySelectorAll('.player-link').forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
-      drawChart(link.dataset.player);
+      togglePlayer(link.dataset.player);
     });
   });
 })();
