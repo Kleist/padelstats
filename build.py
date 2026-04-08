@@ -55,8 +55,20 @@ def parse_matches(rows):
         else:
             winner = "draw"
 
+        # Parse date for sortable ISO format (handles DD/MM/YYYY and DD-MM-YYYY)
+        date_sortable = date
+        for sep in ('/', '-', '.'):
+            parts = date.split(sep)
+            if len(parts) == 3:
+                try:
+                    date_sortable = f"{int(parts[2]):04d}-{int(parts[1]):02d}-{int(parts[0]):02d}"
+                except ValueError:
+                    pass
+                break
+
         matches.append({
             "date": date,
+            "date_sortable": date_sortable,
             "team_a": team_a,
             "team_b": team_b,
             "sets": sets,
@@ -256,6 +268,10 @@ TEMPLATE = Template("""\
   }
   th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
   th[title] { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--text); }
+  th.sort-asc::after { content: ' \25B2'; font-size: 0.6em; vertical-align: middle; }
+  th.sort-desc::after { content: ' \25BC'; font-size: 0.6em; vertical-align: middle; }
   tr:hover { background: rgba(56, 189, 248, 0.05); }
   .win { color: var(--green); font-weight: 600; }
   .loss { color: var(--red); font-weight: 600; }
@@ -326,16 +342,16 @@ TEMPLATE = Template("""\
   <thead>
     <tr>
       <th>#</th>
-      <th>Spiller</th>
-      <th>K</th>
-      <th>V</th>
-      <th>T</th>
-      <th>V%</th>
-      <th>Sæt</th>
-      <th>Partier</th>
-      <th title="Antal 6-0 sæt givet / modtaget">Æg</th>
-      <th>Streak</th>
-      <th>Bedste</th>
+      <th class="sortable" data-col="1">Spiller</th>
+      <th class="sortable" data-col="2">K</th>
+      <th class="sortable" data-col="3">V</th>
+      <th class="sortable" data-col="4">T</th>
+      <th class="sortable" data-col="5">V%</th>
+      <th class="sortable" data-col="6">Sæt</th>
+      <th class="sortable" data-col="7">Partier</th>
+      <th class="sortable" data-col="8" title="Antal 6-0 sæt givet / modtaget">Æg</th>
+      <th class="sortable" data-col="9">Streak</th>
+      <th class="sortable" data-col="10">Bedste</th>
     </tr>
   </thead>
   <tbody>
@@ -343,15 +359,15 @@ TEMPLATE = Template("""\
     <tr>
       <td>{{ loop.index }}</td>
       <td><strong>{{ p.name }}</strong></td>
-      <td>{{ p.matches_played }}</td>
-      <td class="win">{{ p.matches_won }}</td>
-      <td class="loss">{{ p.matches_lost }}</td>
-      <td class="pct">{{ "%.0f"|format(p.win_pct) }}%</td>
-      <td>{{ p.sets_won }}-{{ p.sets_lost }}</td>
-      <td>{{ p.games_won }}-{{ p.games_lost }}</td>
-      <td><span class="win">{{ p.eggs_given }}</span> / <span class="loss">{{ p.eggs_received }}</span></td>
-      <td>{% if p.current_win_streak > 0 %}<span class="win">{{ p.current_win_streak }}V</span>{% elif p.current_lose_streak > 0 %}<span class="loss">{{ p.current_lose_streak }}T</span>{% else %}-{% endif %}</td>
-      <td>{{ p.best_streak }}V</td>
+      <td data-sort="{{ p.matches_played }}">{{ p.matches_played }}</td>
+      <td class="win" data-sort="{{ p.matches_won }}">{{ p.matches_won }}</td>
+      <td class="loss" data-sort="{{ p.matches_lost }}">{{ p.matches_lost }}</td>
+      <td class="pct" data-sort="{{ p.win_pct }}">{{ "%.0f"|format(p.win_pct) }}%</td>
+      <td data-sort="{{ p.sets_won - p.sets_lost }}">{{ p.sets_won }}-{{ p.sets_lost }}</td>
+      <td data-sort="{{ p.games_won - p.games_lost }}">{{ p.games_won }}-{{ p.games_lost }}</td>
+      <td data-sort="{{ p.eggs_given - p.eggs_received }}"><span class="win">{{ p.eggs_given }}</span> / <span class="loss">{{ p.eggs_received }}</span></td>
+      <td data-sort="{{ p.current_win_streak - p.current_lose_streak }}">{% if p.current_win_streak > 0 %}<span class="win">{{ p.current_win_streak }}V</span>{% elif p.current_lose_streak > 0 %}<span class="loss">{{ p.current_lose_streak }}T</span>{% else %}-{% endif %}</td>
+      <td data-sort="{{ p.best_streak }}">{{ p.best_streak }}V</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -362,10 +378,10 @@ TEMPLATE = Template("""\
   <thead>
     <tr>
       <th>#</th>
-      <th>Spiller</th>
-      <th title="Individuel styrke estimeret fra holdresultater. Starter på 1500. Højere = stærkere.">Elo</th>
-      <th title="Gennemsnitlig Elo for modstanderholdet. Højere = sværere modstandere.">Gns. Modst.</th>
-      <th title="Gennemsnitlig Elo for makkeren. Lavere = mere selvstændigt optjent rating.">Gns. Makker</th>
+      <th class="sortable" data-col="1">Spiller</th>
+      <th class="sortable" data-col="2" title="Individuel styrke estimeret fra holdresultater. Starter på 1500. Højere = stærkere.">Elo</th>
+      <th class="sortable" data-col="3" title="Gennemsnitlig Elo for modstanderholdet. Højere = sværere modstandere.">Gns. Modst.</th>
+      <th class="sortable" data-col="4" title="Gennemsnitlig Elo for makkeren. Lavere = mere selvstændigt optjent rating.">Gns. Makker</th>
     </tr>
   </thead>
   <tbody>
@@ -373,9 +389,9 @@ TEMPLATE = Template("""\
     <tr>
       <td>{{ loop.index }}</td>
       <td><strong>{{ p.name }}</strong></td>
-      <td class="pct">{{ p.elo }}</td>
-      <td class="muted">{{ p.avg_opp }}</td>
-      <td class="muted">{{ p.avg_partner }}</td>
+      <td class="pct" data-sort="{{ p.elo }}">{{ p.elo }}</td>
+      <td class="muted" data-sort="{{ p.avg_opp }}">{{ p.avg_opp }}</td>
+      <td class="muted" data-sort="{{ p.avg_partner }}">{{ p.avg_partner }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -385,21 +401,21 @@ TEMPLATE = Template("""\
 <table>
   <thead>
     <tr>
-      <th>Par</th>
-      <th>K</th>
-      <th>V</th>
-      <th>T</th>
-      <th>V%</th>
+      <th class="sortable" data-col="0">Par</th>
+      <th class="sortable" data-col="1">K</th>
+      <th class="sortable" data-col="2">V</th>
+      <th class="sortable" data-col="3">T</th>
+      <th class="sortable" data-col="4">V%</th>
     </tr>
   </thead>
   <tbody>
     {% for p in pairs %}
     <tr>
       <td><strong>{{ p.players }}</strong></td>
-      <td>{{ p.played }}</td>
-      <td class="win">{{ p.won }}</td>
-      <td class="loss">{{ p.lost }}</td>
-      <td class="pct">{{ "%.0f"|format(p.win_pct) }}%</td>
+      <td data-sort="{{ p.played }}">{{ p.played }}</td>
+      <td class="win" data-sort="{{ p.won }}">{{ p.won }}</td>
+      <td class="loss" data-sort="{{ p.lost }}">{{ p.lost }}</td>
+      <td class="pct" data-sort="{{ p.win_pct }}">{{ "%.0f"|format(p.win_pct) }}%</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -409,9 +425,9 @@ TEMPLATE = Template("""\
 <table>
   <thead>
     <tr>
-      <th>Dato</th>
-      <th>Hold A</th>
-      <th>Hold B</th>
+      <th class="sortable" data-col="0">Dato</th>
+      <th class="sortable" data-col="1">Hold A</th>
+      <th class="sortable" data-col="2">Hold B</th>
       <th>Sæt</th>
       <th>Resultat</th>
     </tr>
@@ -419,7 +435,7 @@ TEMPLATE = Template("""\
   <tbody>
     {% for m in matches|reverse %}
     <tr>
-      <td>{{ m.date }}</td>
+      <td data-sort="{{ m.date_sortable }}">{{ m.date }}</td>
       <td{% if m.winner == 'A' %} class="win"{% endif %}>{{ m.team_a|join(' & ') }}</td>
       <td{% if m.winner == 'B' %} class="win"{% endif %}>{{ m.team_b|join(' & ') }}</td>
       <td class="set-score">
@@ -529,6 +545,48 @@ function recommend() {
     `;
   }).join('');
 }
+
+// Table sorting
+document.querySelectorAll('table').forEach(table => {
+  const headers = table.querySelectorAll('th.sortable');
+  if (!headers.length) return;
+  headers.forEach(th => {
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col);
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const isAsc = th.classList.contains('sort-asc');
+
+      // Clear sort classes on this table's headers
+      table.querySelectorAll('th').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+
+      // Toggle direction
+      const dir = isAsc ? 'desc' : 'asc';
+      th.classList.add('sort-' + dir);
+
+      rows.sort((a, b) => {
+        const aCell = a.cells[col];
+        const bCell = b.cells[col];
+        const aVal = aCell.dataset.sort !== undefined ? aCell.dataset.sort : aCell.textContent.trim();
+        const bVal = bCell.dataset.sort !== undefined ? bCell.dataset.sort : bCell.textContent.trim();
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return dir === 'asc' ? aNum - bNum : bNum - aNum;
+        }
+        return dir === 'asc' ? aVal.localeCompare(bVal, 'da') : bVal.localeCompare(aVal, 'da');
+      });
+
+      // Re-append sorted rows and renumber '#' column if present
+      const firstTh = table.querySelector('th:first-child');
+      const hasRank = firstTh && firstTh.textContent.trim() === '#';
+      rows.forEach((row, i) => {
+        if (hasRank) row.cells[0].textContent = i + 1;
+        tbody.appendChild(row);
+      });
+    });
+  });
+});
 </script>
 
 </body>
