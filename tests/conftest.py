@@ -2,7 +2,6 @@
 
 import pytest
 
-
 # Raw sheet rows matching the Google Sheets format: [date, a1, a2, b1, b2, s1a, s1b, s2a, s2b, ...]
 # Two header rows are skipped by parse_matches, so we include them.
 SAMPLE_ROWS = [

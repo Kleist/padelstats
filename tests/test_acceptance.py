@@ -3,8 +3,7 @@
 import json
 from pathlib import Path
 
-from build import TEMPLATE, compute_player_stats, compute_elo, compute_pair_stats
-
+from build import TEMPLATE, compute_elo, compute_pair_stats, compute_player_stats
 
 GOLDEN_FILE = Path(__file__).parent / "expected" / "index.html"
 

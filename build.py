@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Fetch padel stats from Google Sheets and generate a static website."""
 
-import os
 import json
+import os
 from collections import defaultdict
+
 from jinja2 import Environment, FileSystemLoader
 
 _template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
@@ -11,8 +12,8 @@ _env = Environment(loader=FileSystemLoader(_template_dir))
 
 
 def fetch_data():
-    from dotenv import load_dotenv
     import requests
+    from dotenv import load_dotenv
     load_dotenv()
     api_key = os.environ["GOOGLE_SHEETS_API_KEY"]
     spreadsheet_id = os.environ["SPREADSHEET_ID"]
