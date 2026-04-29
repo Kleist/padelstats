@@ -97,7 +97,7 @@ def filter_by_venue(matches, venue):
 def compute_player_stats(matches):
     """Compute per-player win/loss/sets/games stats."""
     stats = defaultdict(lambda: {
-        "matches_played": 0, "matches_won": 0, "matches_lost": 0,
+        "matches_played": 0, "matches_won": 0, "matches_lost": 0, "matches_drawn": 0,
         "sets_won": 0, "sets_lost": 0, "games_won": 0, "games_lost": 0,
         "current_win_streak": 0, "best_streak": 0, "current_lose_streak": 0,
         "eggs_given": 0, "eggs_received": 0,
@@ -117,6 +117,10 @@ def compute_player_stats(matches):
                 s["matches_lost"] += 1
                 s["current_lose_streak"] += 1
                 s["current_win_streak"] = 0
+            else:
+                s["matches_drawn"] += 1
+                s["current_win_streak"] = 0
+                s["current_lose_streak"] = 0
             s["sets_won"] += m["sets_won"][0]
             s["sets_lost"] += m["sets_won"][1]
             s["games_won"] += m["games"][0]
@@ -140,6 +144,10 @@ def compute_player_stats(matches):
                 s["matches_lost"] += 1
                 s["current_lose_streak"] += 1
                 s["current_win_streak"] = 0
+            else:
+                s["matches_drawn"] += 1
+                s["current_win_streak"] = 0
+                s["current_lose_streak"] = 0
             s["sets_won"] += m["sets_won"][1]
             s["sets_lost"] += m["sets_won"][0]
             s["games_won"] += m["games"][1]
@@ -171,13 +179,16 @@ def compute_elo(matches, k=32, initial=1500):
     elo_history = defaultdict(list)
 
     for m in matches:
-        if m["winner"] == "draw":
-            continue
         team_a_rating = (ratings[m["team_a"][0]] + ratings[m["team_a"][1]]) / 2
         team_b_rating = (ratings[m["team_b"][0]] + ratings[m["team_b"][1]]) / 2
 
         expected_a = 1 / (1 + 10 ** ((team_b_rating - team_a_rating) / 400))
-        actual_a = 1.0 if m["winner"] == "A" else 0.0
+        if m["winner"] == "A":
+            actual_a = 1.0
+        elif m["winner"] == "B":
+            actual_a = 0.0
+        else:
+            actual_a = 0.5
 
         delta = k * (actual_a - expected_a)
         for player in m["team_a"]:
@@ -197,8 +208,6 @@ def compute_elo(matches, k=32, initial=1500):
     opp_elos = defaultdict(list)
     partner_elos = defaultdict(list)
     for m in matches:
-        if m["winner"] == "draw":
-            continue
         for player in m["team_a"]:
             partner = [p for p in m["team_a"] if p != player][0]
             opp_elos[player].append((ratings[m["team_b"][0]] + ratings[m["team_b"][1]]) / 2)
@@ -219,7 +228,7 @@ def compute_elo(matches, k=32, initial=1500):
 
 def compute_pair_stats(matches):
     """Compute stats for each player pair (partnership)."""
-    pairs = defaultdict(lambda: {"played": 0, "won": 0, "lost": 0})
+    pairs = defaultdict(lambda: {"played": 0, "won": 0, "lost": 0, "drawn": 0})
 
     for m in matches:
         pair_a = tuple(sorted(m["team_a"]))
@@ -234,6 +243,9 @@ def compute_pair_stats(matches):
         elif m["winner"] == "B":
             pairs[pair_b]["won"] += 1
             pairs[pair_a]["lost"] += 1
+        else:
+            pairs[pair_a]["drawn"] += 1
+            pairs[pair_b]["drawn"] += 1
 
     result = []
     for (p1, p2), s in pairs.items():

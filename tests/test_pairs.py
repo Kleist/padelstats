@@ -65,3 +65,5 @@ def test_draw_counted_in_played_not_won_lost():
     assert pairs["A & B"]["played"] == 1
     assert pairs["A & B"]["won"] == 0
     assert pairs["A & B"]["lost"] == 0
+    assert pairs["A & B"]["drawn"] == 1
+    assert pairs["C & D"]["drawn"] == 1
