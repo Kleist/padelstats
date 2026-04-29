@@ -113,10 +113,10 @@ def test_multiple_matches():
     assert result[1]["date"] == "02/01/2026"
 
 
-def test_sted_column_ignored():
-    """The 'Sted' column is accepted but not stored on the match dict."""
-    rows = [[], [], ["01/01/2026", "Centerbanen", "A1", "A2", "B1", "B2", "6", "3", "6", "0"]]
+def test_sted_column_stored():
+    """The 'Sted' column is stored on the match dict (stripped)."""
+    rows = [[], [], ["01/01/2026", "  Inde  ", "A1", "A2", "B1", "B2", "6", "3", "6", "0"]]
     m = parse_matches(rows)[0]
-    assert "sted" not in m
+    assert m["sted"] == "Inde"
     assert m["team_a"] == ["A1", "A2"]
     assert m["sets"] == [(6, 3), (6, 0)]

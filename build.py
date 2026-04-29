@@ -30,7 +30,7 @@ def parse_matches(rows):
         if len(row) < 8:
             continue
         date = row[0]
-        # row[1] is "Sted" (location) — accepted but not used yet
+        sted = row[1].strip()
         team_a = [row[2].strip(), row[3].strip()]
         team_b = [row[4].strip(), row[5].strip()]
 
@@ -72,6 +72,7 @@ def parse_matches(rows):
         matches.append({
             "date": date,
             "date_sortable": date_sortable,
+            "sted": sted,
             "team_a": team_a,
             "team_b": team_b,
             "sets": sets,
@@ -80,6 +81,17 @@ def parse_matches(rows):
             "winner": winner,
         })
     return matches
+
+
+VENUES = ["begge", "inde", "ude"]
+
+
+def filter_by_venue(matches, venue):
+    """Return matches at the given venue. 'begge' returns all matches."""
+    if venue == "begge":
+        return list(matches)
+    label = venue.capitalize()
+    return [m for m in matches if m["sted"] == label]
 
 
 def compute_player_stats(matches):
@@ -233,27 +245,53 @@ def compute_pair_stats(matches):
 
 TEMPLATE = _env.get_template("index.html")
 
+
+def build_venue_data(matches):
+    """Compute leaderboard/Elo/pairs for each venue (begge/inde/ude)."""
+    venue_data = {}
+    for venue in VENUES:
+        subset = filter_by_venue(matches, venue)
+        leaderboard = compute_player_stats(subset)
+        elo, elo_history = compute_elo(subset)
+        pairs = compute_pair_stats(subset)
+        venue_data[venue] = {
+            "leaderboard": leaderboard,
+            "elo": elo,
+            "pairs": pairs,
+            "elo_dict": {p["name"]: p["elo"] for p in elo},
+            "pair_counts": {p["players"]: p["played"] for p in pairs},
+            "elo_history": dict(elo_history),
+        }
+    return venue_data
+
+
+def render_html(matches, default_venue="begge"):
+    venue_data = build_venue_data(matches)
+    venue_json = {
+        v: {
+            "elo": d["elo_dict"],
+            "pairCounts": d["pair_counts"],
+            "eloHistory": d["elo_history"],
+        }
+        for v, d in venue_data.items()
+    }
+    return TEMPLATE.render(
+        matches=matches,
+        venues=VENUES,
+        default_venue=default_venue,
+        venue_data=venue_data,
+        venue_data_json=json.dumps(venue_json),
+    )
+
+
 def main():
     print("Fetching data from Google Sheets...")
     rows = fetch_data()
     matches = parse_matches(rows)
     print(f"Parsed {len(matches)} matches")
 
-    leaderboard = compute_player_stats(matches)
-    elo, elo_history = compute_elo(matches)
-    pairs = compute_pair_stats(matches)
-
     os.makedirs("dist", exist_ok=True)
-    elo_dict = {p["name"]: p["elo"] for p in elo}
-    # Build pair history: how many times each pair has played together
-    pair_counts = {}
-    for p in pairs:
-        pair_counts[p["players"]] = p["played"]
-    html = TEMPLATE.render(matches=matches, leaderboard=leaderboard, elo=elo,
-                           elo_json=json.dumps(elo_dict),
-                           pair_counts_json=json.dumps(pair_counts),
-                           elo_history_json=json.dumps(dict(elo_history)),
-                           pairs=pairs)
+    html = render_html(matches)
     with open("dist/index.html", "w") as f:
         f.write(html)
     print("Generated dist/index.html")
