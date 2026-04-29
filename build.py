@@ -27,14 +27,15 @@ def parse_matches(rows):
     """Parse raw sheet rows into match dicts."""
     matches = []
     for row in rows[2:]:  # skip header rows
-        if len(row) < 7:
+        if len(row) < 8:
             continue
         date = row[0]
-        team_a = [row[1].strip(), row[2].strip()]
-        team_b = [row[3].strip(), row[4].strip()]
+        # row[1] is "Sted" (location) — accepted but not used yet
+        team_a = [row[2].strip(), row[3].strip()]
+        team_b = [row[4].strip(), row[5].strip()]
 
         sets = []
-        for i in range(5, len(row) - 1, 2):
+        for i in range(6, len(row) - 1, 2):
             try:
                 score_a = int(row[i])
                 score_b = int(row[i + 1])
