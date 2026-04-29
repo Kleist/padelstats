@@ -10,19 +10,19 @@ SAMPLE_ROWS = [
     # Match 1: Anders & Bo beat Carsten & Dennis 2-0 (includes a 6-0 egg)
     ["15/01/2026", "Inde", "Anders", "Bo", "Carsten", "Dennis", "6", "3", "6", "0"],
     # Match 2: Anders & Carsten beat Bo & Erik 2-0
-    ["22/01/2026", "Inde", "Anders", "Carsten", "Bo", "Erik", "6", "4", "6", "3"],
+    ["22/01/2026", "Ude", "Anders", "Carsten", "Bo", "Erik", "6", "4", "6", "3"],
     # Match 3: Anders & Erik beat Bo & Dennis 2-1 (team B wins first set)
     ["05/02/2026", "Inde", "Bo", "Dennis", "Anders", "Erik", "6", "4", "3", "6", "2", "6"],
     # Match 4: Carsten & Erik beat Anders & Dennis 2-0 (includes a 6-0 egg)
-    ["12/02/2026", "Inde", "Carsten", "Erik", "Anders", "Dennis", "6", "1", "6", "0"],
+    ["12/02/2026", "Ude", "Carsten", "Erik", "Anders", "Dennis", "6", "1", "6", "0"],
     # Match 5: Anders & Bo beat Dennis & Erik 2-1 (tiebreak set 7-5)
     ["26/02/2026", "Inde", "Anders", "Bo", "Dennis", "Erik", "6", "4", "3", "6", "7", "5"],
     # Match 6: Carsten & Bo beat Anders & Dennis 2-1
-    ["05/03/2026", "Inde", "Carsten", "Bo", "Anders", "Dennis", "4", "6", "6", "2", "6", "4"],
+    ["05/03/2026", "Ude", "Carsten", "Bo", "Anders", "Dennis", "4", "6", "6", "2", "6", "4"],
     # Match 7: Anders & Erik beat Bo & Carsten 2-0
     ["19/03/2026", "Inde", "Anders", "Erik", "Bo", "Carsten", "6", "3", "6", "4"],
     # Match 8: Draw — equal sets won (1-1, no third set decided)
-    ["02/04/2026", "Inde", "Anders", "Bo", "Carsten", "Erik", "6", "3", "3", "6"],
+    ["02/04/2026", "Ude", "Anders", "Bo", "Carsten", "Erik", "6", "3", "3", "6"],
     # Match 9: Unfinished third set (4-3) — match abandoned mid-set
     ["16/04/2026", "Inde", "Bo", "Erik", "Anders", "Carsten", "6", "4", "4", "6", "4", "3"],
 ]

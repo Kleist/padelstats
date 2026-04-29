@@ -73,6 +73,11 @@
     gap: 0.5rem;
     margin-bottom: 1.5rem;
   }
+  .venue-filter {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0 0 1.5rem;
+  }
   .player-btn {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -145,6 +150,14 @@
 <h1>Padel Stats</h1>
 <p class="subtitle">{{ matches|length }} kampe spillet</p>
 
+<div class="venue-filter">
+  {% for venue in venues %}
+  <button class="player-btn venue-btn{% if venue == default_venue %} selected{% endif %}" data-venue="{{ venue }}">{{ venue|capitalize }}</button>
+  {% endfor %}
+</div>
+
+{% for venue in venues %}
+<div class="venue-panel" data-venue="{{ venue }}"{% if venue != default_venue %} hidden{% endif %}>
 <h2>Leaderboard</h2>
 <table>
   <thead>
@@ -163,7 +176,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for p in leaderboard %}
+    {% for p in venue_data[venue].leaderboard %}
     <tr>
       <td>{{ loop.index }}</td>
       <td><strong><a class="player-link" data-player="{{ p.name }}">{{ p.name }}</a></strong></td>
@@ -193,7 +206,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for p in elo %}
+    {% for p in venue_data[venue].elo %}
     <tr>
       <td>{{ loop.index }}</td>
       <td><strong><a class="player-link" data-player="{{ p.name }}">{{ p.name }}</a></strong></td>
@@ -204,15 +217,6 @@
     {% endfor %}
   </tbody>
 </table>
-
-<div id="elo-chart-container">
-  <div id="elo-chart-header">
-    <div id="elo-chart-title">Elo-udvikling</div>
-    <button id="elo-chart-close">&times;</button>
-  </div>
-  <div id="elo-chart-legend"></div>
-  <canvas id="elo-chart" height="300"></canvas>
-</div>
 
 <h2>Makkerpar</h2>
 <table>
@@ -226,7 +230,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for p in pairs %}
+    {% for p in venue_data[venue].pairs %}
     <tr>
       <td><strong>{{ p.players }}</strong></td>
       <td data-sort="{{ p.played }}">{{ p.played }}</td>
@@ -237,6 +241,17 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
+{% endfor %}
+
+<div id="elo-chart-container">
+  <div id="elo-chart-header">
+    <div id="elo-chart-title">Elo-udvikling</div>
+    <button id="elo-chart-close">&times;</button>
+  </div>
+  <div id="elo-chart-legend"></div>
+  <canvas id="elo-chart" height="300"></canvas>
+</div>
 
 <h2>Kamphistorik</h2>
 <table>
@@ -280,9 +295,13 @@
 <div id="matchup-result" style="min-height: 320px;"></div>
 
 <script>
-const elo = {{ elo_json }};
-const pairCounts = {{ pair_counts_json }};
-const eloHistory = {{ elo_history_json }};
+const venueData = {{ venue_data_json }};
+let currentVenue = {{ default_venue|tojson }};
+function activeData() { return venueData[currentVenue]; }
+function activeElo() { return activeData().elo; }
+function activePairCounts() { return activeData().pairCounts; }
+function activeEloHistory() { return activeData().eloHistory; }
+
 const grid = document.getElementById('player-grid');
 const result = document.getElementById('matchup-result');
 const selected = new Set();
@@ -291,7 +310,7 @@ function pairKey(a, b) {
   return [a, b].sort().join(' & ');
 }
 
-Object.keys(elo).sort().forEach(name => {
+Object.keys(venueData.begge.elo).sort().forEach(name => {
   const btn = document.createElement('button');
   btn.className = 'player-btn';
   btn.textContent = name;
@@ -309,8 +328,22 @@ Object.keys(elo).sort().forEach(name => {
   grid.appendChild(btn);
 });
 
+document.querySelectorAll('.venue-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentVenue = btn.dataset.venue;
+    document.querySelectorAll('.venue-btn').forEach(b =>
+      b.classList.toggle('selected', b.dataset.venue === currentVenue));
+    document.querySelectorAll('.venue-panel').forEach(p =>
+      p.toggleAttribute('hidden', p.dataset.venue !== currentVenue));
+    if (selected.size === 4) recommend();
+    if (typeof redrawEloChart === 'function') redrawEloChart();
+  });
+});
+
 function recommend() {
   const players = [...selected];
+  const elo = activeElo();
+  const pairCounts = activePairCounts();
   const pairings = [
     [[players[0], players[1]], [players[2], players[3]]],
     [[players[0], players[2]], [players[1], players[3]]],
@@ -321,8 +354,8 @@ function recommend() {
   // Novelty: prefer pairs that have played together fewer times
   // Balance: prefer close Elo matchups
   const scored = pairings.map(([teamA, teamB]) => {
-    const eloA = (elo[teamA[0]] + elo[teamA[1]]) / 2;
-    const eloB = (elo[teamB[0]] + elo[teamB[1]]) / 2;
+    const eloA = ((elo[teamA[0]] ?? 1500) + (elo[teamA[1]] ?? 1500)) / 2;
+    const eloB = ((elo[teamB[0]] ?? 1500) + (elo[teamB[1]] ?? 1500)) / 2;
     const eloDiff = Math.abs(eloA - eloB);
 
     const pairsPlayed = (pairCounts[pairKey(teamA[0], teamA[1])] || 0)
@@ -415,6 +448,10 @@ document.querySelectorAll('table').forEach(table => {
   const colors = ['#38bdf8', '#fbbf24', '#4ade80', '#f87171', '#a78bfa', '#fb923c', '#2dd4bf', '#f472b6'];
   const chartPlayers = new Map(); // name -> colorIndex
 
+  window.redrawEloChart = function() {
+    if (chartPlayers.size > 0) drawChart();
+  };
+
   closeBtn.addEventListener('click', () => {
     chartPlayers.clear();
     container.classList.remove('visible');
@@ -459,7 +496,7 @@ document.querySelectorAll('table').forEach(table => {
     // Build unified date axis from all selected players
     const dateMap = new Map(); // date_sortable -> display date
     players.forEach(name => {
-      (eloHistory[name] || []).forEach(d => {
+      (activeEloHistory()[name] || []).forEach(d => {
         if (!dateMap.has(d.date_sortable)) dateMap.set(d.date_sortable, d.date);
       });
     });
@@ -469,7 +506,7 @@ document.querySelectorAll('table').forEach(table => {
     // Compute Y range across all selected players
     let allElos = [1500];
     players.forEach(name => {
-      (eloHistory[name] || []).forEach(d => allElos.push(d.elo));
+      (activeEloHistory()[name] || []).forEach(d => allElos.push(d.elo));
     });
     let minElo = Math.min(...allElos);
     let maxElo = Math.max(...allElos);
@@ -528,7 +565,7 @@ document.querySelectorAll('table').forEach(table => {
 
     // Draw each player's line and points
     players.forEach(name => {
-      const data = eloHistory[name] || [];
+      const data = activeEloHistory()[name] || [];
       const color = colors[chartPlayers.get(name) % colors.length];
 
       // Line
@@ -567,7 +604,7 @@ document.querySelectorAll('table').forEach(table => {
     // Legend
     legendEl.innerHTML = players.map(name => {
       const color = colors[chartPlayers.get(name) % colors.length];
-      const data = eloHistory[name] || [];
+      const data = activeEloHistory()[name] || [];
       const current = data.length ? data[data.length - 1].elo : '?';
       return `<span class="legend-item"><span class="legend-swatch" style="background:${color}"></span>${name} (${current})</span>`;
     }).join('');

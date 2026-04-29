@@ -73,6 +73,11 @@
     gap: 0.5rem;
     margin-bottom: 1.5rem;
   }
+  .venue-filter {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0 0 1.5rem;
+  }
   .player-btn {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -145,6 +150,18 @@
 <h1>Padel Stats</h1>
 <p class="subtitle">9 kampe spillet</p>
 
+<div class="venue-filter">
+  
+  <button class="player-btn venue-btn selected" data-venue="begge">Begge</button>
+  
+  <button class="player-btn venue-btn" data-venue="inde">Inde</button>
+  
+  <button class="player-btn venue-btn" data-venue="ude">Ude</button>
+  
+</div>
+
+
+<div class="venue-panel" data-venue="begge">
 <h2>Leaderboard</h2>
 <table>
   <thead>
@@ -293,15 +310,6 @@
   </tbody>
 </table>
 
-<div id="elo-chart-container">
-  <div id="elo-chart-header">
-    <div id="elo-chart-title">Elo-udvikling</div>
-    <button id="elo-chart-close">&times;</button>
-  </div>
-  <div id="elo-chart-legend"></div>
-  <canvas id="elo-chart" height="300"></canvas>
-</div>
-
 <h2>Makkerpar</h2>
 <table>
   <thead>
@@ -397,6 +405,461 @@
     
   </tbody>
 </table>
+</div>
+
+<div class="venue-panel" data-venue="inde" hidden>
+<h2>Leaderboard</h2>
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th class="sortable" data-col="1">Spiller</th>
+      <th class="sortable" data-col="2">K</th>
+      <th class="sortable" data-col="3">V</th>
+      <th class="sortable" data-col="4">T</th>
+      <th class="sortable" data-col="5">V%</th>
+      <th class="sortable" data-col="6">Sæt</th>
+      <th class="sortable" data-col="7">Partier</th>
+      <th class="sortable" data-col="8" title="Antal 6-0 sæt givet / modtaget">Æg</th>
+      <th class="sortable" data-col="9">Streak</th>
+      <th class="sortable" data-col="10">Bedste</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+    <tr>
+      <td>1</td>
+      <td><strong><a class="player-link" data-player="Anders">Anders</a></strong></td>
+      <td data-sort="5">5</td>
+      <td class="win" data-sort="4">4</td>
+      <td class="loss" data-sort="0">0</td>
+      <td class="pct" data-sort="80.0">80%</td>
+      <td data-sort="6">9-3</td>
+      <td data-sort="19">69-50</td>
+      <td data-sort="1"><span class="win">1</span> / <span class="loss">0</span></td>
+      <td data-sort="4"><span class="win">4V</span></td>
+      <td data-sort="4">4V</td>
+    </tr>
+    
+    <tr>
+      <td>2</td>
+      <td><strong><a class="player-link" data-player="Erik">Erik</a></strong></td>
+      <td data-sort="4">4</td>
+      <td class="win" data-sort="2">2</td>
+      <td class="loss" data-sort="1">1</td>
+      <td class="pct" data-sort="50.0">50%</td>
+      <td data-sort="2">6-4</td>
+      <td data-sort="10">57-47</td>
+      <td data-sort="0"><span class="win">0</span> / <span class="loss">0</span></td>
+      <td data-sort="1"><span class="win">1V</span></td>
+      <td data-sort="1">1V</td>
+    </tr>
+    
+    <tr>
+      <td>3</td>
+      <td><strong><a class="player-link" data-player="Bo">Bo</a></strong></td>
+      <td data-sort="5">5</td>
+      <td class="win" data-sort="2">2</td>
+      <td class="loss" data-sort="2">2</td>
+      <td class="pct" data-sort="40.0">40%</td>
+      <td data-sort="0">6-6</td>
+      <td data-sort="1">60-59</td>
+      <td data-sort="1"><span class="win">1</span> / <span class="loss">0</span></td>
+      <td data-sort="-1"><span class="loss">1T</span></td>
+      <td data-sort="1">1V</td>
+    </tr>
+    
+    <tr>
+      <td>4</td>
+      <td><strong><a class="player-link" data-player="Carsten">Carsten</a></strong></td>
+      <td data-sort="3">3</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="2">2</td>
+      <td class="pct" data-sort="0.0">0%</td>
+      <td data-sort="-4">1-5</td>
+      <td data-sort="-15">23-38</td>
+      <td data-sort="-1"><span class="win">0</span> / <span class="loss">1</span></td>
+      <td data-sort="-2"><span class="loss">2T</span></td>
+      <td data-sort="0">0V</td>
+    </tr>
+    
+    <tr>
+      <td>5</td>
+      <td><strong><a class="player-link" data-player="Dennis">Dennis</a></strong></td>
+      <td data-sort="3">3</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="3">3</td>
+      <td class="pct" data-sort="0.0">0%</td>
+      <td data-sort="-4">2-6</td>
+      <td data-sort="-15">29-44</td>
+      <td data-sort="-1"><span class="win">0</span> / <span class="loss">1</span></td>
+      <td data-sort="-3"><span class="loss">3T</span></td>
+      <td data-sort="0">0V</td>
+    </tr>
+    
+  </tbody>
+</table>
+
+<h2>Elo Rating</h2>
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th class="sortable" data-col="1">Spiller</th>
+      <th class="sortable" data-col="2" title="Individuel styrke estimeret fra holdresultater. Starter på 1500. Højere = stærkere.">Elo</th>
+      <th class="sortable" data-col="3" title="Gennemsnitlig Elo for modstanderholdet. Højere = sværere modstandere.">Gns. Modst.</th>
+      <th class="sortable" data-col="4" title="Gennemsnitlig Elo for makkeren. Lavere = mere selvstændigt optjent rating.">Gns. Makker</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+    <tr>
+      <td>1</td>
+      <td><strong><a class="player-link" data-player="Anders">Anders</a></strong></td>
+      <td class="pct" data-sort="1561">1561</td>
+      <td class="muted" data-sort="1477">1477</td>
+      <td class="muted" data-sort="1508">1508</td>
+    </tr>
+    
+    <tr>
+      <td>2</td>
+      <td><strong><a class="player-link" data-player="Erik">Erik</a></strong></td>
+      <td class="pct" data-sort="1516">1516</td>
+      <td class="muted" data-sort="1498">1498</td>
+      <td class="muted" data-sort="1525">1525</td>
+    </tr>
+    
+    <tr>
+      <td>3</td>
+      <td><strong><a class="player-link" data-player="Bo">Bo</a></strong></td>
+      <td class="pct" data-sort="1500">1500</td>
+      <td class="muted" data-sort="1506">1506</td>
+      <td class="muted" data-sort="1511">1511</td>
+    </tr>
+    
+    <tr>
+      <td>4</td>
+      <td><strong><a class="player-link" data-player="Carsten">Carsten</a></strong></td>
+      <td class="pct" data-sort="1469">1469</td>
+      <td class="muted" data-sort="1535">1535</td>
+      <td class="muted" data-sort="1477">1477</td>
+    </tr>
+    
+    <tr>
+      <td>5</td>
+      <td><strong><a class="player-link" data-player="Dennis">Dennis</a></strong></td>
+      <td class="pct" data-sort="1453">1453</td>
+      <td class="muted" data-sort="1533">1533</td>
+      <td class="muted" data-sort="1495">1495</td>
+    </tr>
+    
+  </tbody>
+</table>
+
+<h2>Makkerpar</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="sortable" data-col="0">Par</th>
+      <th class="sortable" data-col="1">K</th>
+      <th class="sortable" data-col="2">V</th>
+      <th class="sortable" data-col="3">T</th>
+      <th class="sortable" data-col="4">V%</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+    <tr>
+      <td><strong>Anders & Bo</strong></td>
+      <td data-sort="2">2</td>
+      <td class="win" data-sort="2">2</td>
+      <td class="loss" data-sort="0">0</td>
+      <td class="pct" data-sort="100.0">100%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Anders & Erik</strong></td>
+      <td data-sort="2">2</td>
+      <td class="win" data-sort="2">2</td>
+      <td class="loss" data-sort="0">0</td>
+      <td class="pct" data-sort="100.0">100%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Carsten & Dennis</strong></td>
+      <td data-sort="1">1</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="1">1</td>
+      <td class="pct" data-sort="0.0">0%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Bo & Dennis</strong></td>
+      <td data-sort="1">1</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="1">1</td>
+      <td class="pct" data-sort="0.0">0%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Dennis & Erik</strong></td>
+      <td data-sort="1">1</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="1">1</td>
+      <td class="pct" data-sort="0.0">0%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Bo & Carsten</strong></td>
+      <td data-sort="1">1</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="1">1</td>
+      <td class="pct" data-sort="0.0">0%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Bo & Erik</strong></td>
+      <td data-sort="1">1</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="0">0</td>
+      <td class="pct" data-sort="0.0">0%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Anders & Carsten</strong></td>
+      <td data-sort="1">1</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="0">0</td>
+      <td class="pct" data-sort="0.0">0%</td>
+    </tr>
+    
+  </tbody>
+</table>
+</div>
+
+<div class="venue-panel" data-venue="ude" hidden>
+<h2>Leaderboard</h2>
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th class="sortable" data-col="1">Spiller</th>
+      <th class="sortable" data-col="2">K</th>
+      <th class="sortable" data-col="3">V</th>
+      <th class="sortable" data-col="4">T</th>
+      <th class="sortable" data-col="5">V%</th>
+      <th class="sortable" data-col="6">Sæt</th>
+      <th class="sortable" data-col="7">Partier</th>
+      <th class="sortable" data-col="8" title="Antal 6-0 sæt givet / modtaget">Æg</th>
+      <th class="sortable" data-col="9">Streak</th>
+      <th class="sortable" data-col="10">Bedste</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+    <tr>
+      <td>1</td>
+      <td><strong><a class="player-link" data-player="Carsten">Carsten</a></strong></td>
+      <td data-sort="4">4</td>
+      <td class="win" data-sort="3">3</td>
+      <td class="loss" data-sort="0">0</td>
+      <td class="pct" data-sort="75.0">75%</td>
+      <td data-sort="5">7-2</td>
+      <td data-sort="20">49-29</td>
+      <td data-sort="1"><span class="win">1</span> / <span class="loss">0</span></td>
+      <td data-sort="3"><span class="win">3V</span></td>
+      <td data-sort="3">3V</td>
+    </tr>
+    
+    <tr>
+      <td>2</td>
+      <td><strong><a class="player-link" data-player="Bo">Bo</a></strong></td>
+      <td data-sort="3">3</td>
+      <td class="win" data-sort="1">1</td>
+      <td class="loss" data-sort="1">1</td>
+      <td class="pct" data-sort="33.33333333333333">33%</td>
+      <td data-sort="-1">3-4</td>
+      <td data-sort="-1">32-33</td>
+      <td data-sort="0"><span class="win">0</span> / <span class="loss">0</span></td>
+      <td data-sort="1"><span class="win">1V</span></td>
+      <td data-sort="1">1V</td>
+    </tr>
+    
+    <tr>
+      <td>3</td>
+      <td><strong><a class="player-link" data-player="Erik">Erik</a></strong></td>
+      <td data-sort="3">3</td>
+      <td class="win" data-sort="1">1</td>
+      <td class="loss" data-sort="1">1</td>
+      <td class="pct" data-sort="33.33333333333333">33%</td>
+      <td data-sort="0">3-3</td>
+      <td data-sort="6">28-22</td>
+      <td data-sort="1"><span class="win">1</span> / <span class="loss">0</span></td>
+      <td data-sort="1"><span class="win">1V</span></td>
+      <td data-sort="1">1V</td>
+    </tr>
+    
+    <tr>
+      <td>4</td>
+      <td><strong><a class="player-link" data-player="Anders">Anders</a></strong></td>
+      <td data-sort="4">4</td>
+      <td class="win" data-sort="1">1</td>
+      <td class="loss" data-sort="2">2</td>
+      <td class="pct" data-sort="25.0">25%</td>
+      <td data-sort="-1">4-5</td>
+      <td data-sort="-10">34-44</td>
+      <td data-sort="-1"><span class="win">0</span> / <span class="loss">1</span></td>
+      <td data-sort="-2"><span class="loss">2T</span></td>
+      <td data-sort="1">1V</td>
+    </tr>
+    
+    <tr>
+      <td>5</td>
+      <td><strong><a class="player-link" data-player="Dennis">Dennis</a></strong></td>
+      <td data-sort="2">2</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="2">2</td>
+      <td class="pct" data-sort="0.0">0%</td>
+      <td data-sort="-3">1-4</td>
+      <td data-sort="-15">13-28</td>
+      <td data-sort="-1"><span class="win">0</span> / <span class="loss">1</span></td>
+      <td data-sort="-2"><span class="loss">2T</span></td>
+      <td data-sort="0">0V</td>
+    </tr>
+    
+  </tbody>
+</table>
+
+<h2>Elo Rating</h2>
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th class="sortable" data-col="1">Spiller</th>
+      <th class="sortable" data-col="2" title="Individuel styrke estimeret fra holdresultater. Starter på 1500. Højere = stærkere.">Elo</th>
+      <th class="sortable" data-col="3" title="Gennemsnitlig Elo for modstanderholdet. Højere = sværere modstandere.">Gns. Modst.</th>
+      <th class="sortable" data-col="4" title="Gennemsnitlig Elo for makkeren. Lavere = mere selvstændigt optjent rating.">Gns. Makker</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+    <tr>
+      <td>1</td>
+      <td><strong><a class="player-link" data-player="Carsten">Carsten</a></strong></td>
+      <td class="pct" data-sort="1548">1548</td>
+      <td class="muted" data-sort="1484">1484</td>
+      <td class="muted" data-sort="1495">1495</td>
+    </tr>
+    
+    <tr>
+      <td>2</td>
+      <td><strong><a class="player-link" data-player="Erik">Erik</a></strong></td>
+      <td class="pct" data-sort="1500">1500</td>
+      <td class="muted" data-sort="1496">1496</td>
+      <td class="muted" data-sort="1523">1523</td>
+    </tr>
+    
+    <tr>
+      <td>3</td>
+      <td><strong><a class="player-link" data-player="Bo">Bo</a></strong></td>
+      <td class="pct" data-sort="1499">1499</td>
+      <td class="muted" data-sort="1496">1496</td>
+      <td class="muted" data-sort="1524">1524</td>
+    </tr>
+    
+    <tr>
+      <td>4</td>
+      <td><strong><a class="player-link" data-player="Anders">Anders</a></strong></td>
+      <td class="pct" data-sort="1484">1484</td>
+      <td class="muted" data-sort="1516">1516</td>
+      <td class="muted" data-sort="1495">1495</td>
+    </tr>
+    
+    <tr>
+      <td>5</td>
+      <td><strong><a class="player-link" data-player="Dennis">Dennis</a></strong></td>
+      <td class="pct" data-sort="1468">1468</td>
+      <td class="muted" data-sort="1524">1524</td>
+      <td class="muted" data-sort="1484">1484</td>
+    </tr>
+    
+  </tbody>
+</table>
+
+<h2>Makkerpar</h2>
+<table>
+  <thead>
+    <tr>
+      <th class="sortable" data-col="0">Par</th>
+      <th class="sortable" data-col="1">K</th>
+      <th class="sortable" data-col="2">V</th>
+      <th class="sortable" data-col="3">T</th>
+      <th class="sortable" data-col="4">V%</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+    <tr>
+      <td><strong>Anders & Carsten</strong></td>
+      <td data-sort="1">1</td>
+      <td class="win" data-sort="1">1</td>
+      <td class="loss" data-sort="0">0</td>
+      <td class="pct" data-sort="100.0">100%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Bo & Carsten</strong></td>
+      <td data-sort="1">1</td>
+      <td class="win" data-sort="1">1</td>
+      <td class="loss" data-sort="0">0</td>
+      <td class="pct" data-sort="100.0">100%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Carsten & Erik</strong></td>
+      <td data-sort="2">2</td>
+      <td class="win" data-sort="1">1</td>
+      <td class="loss" data-sort="0">0</td>
+      <td class="pct" data-sort="50.0">50%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Bo & Erik</strong></td>
+      <td data-sort="1">1</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="1">1</td>
+      <td class="pct" data-sort="0.0">0%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Anders & Dennis</strong></td>
+      <td data-sort="2">2</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="2">2</td>
+      <td class="pct" data-sort="0.0">0%</td>
+    </tr>
+    
+    <tr>
+      <td><strong>Anders & Bo</strong></td>
+      <td data-sort="1">1</td>
+      <td class="win" data-sort="0">0</td>
+      <td class="loss" data-sort="0">0</td>
+      <td class="pct" data-sort="0.0">0%</td>
+    </tr>
+    
+  </tbody>
+</table>
+</div>
+
+
+<div id="elo-chart-container">
+  <div id="elo-chart-header">
+    <div id="elo-chart-title">Elo-udvikling</div>
+    <button id="elo-chart-close">&times;</button>
+  </div>
+  <div id="elo-chart-legend"></div>
+  <canvas id="elo-chart" height="300"></canvas>
+</div>
 
 <h2>Kamphistorik</h2>
 <table>
@@ -590,9 +1053,13 @@
 <div id="matchup-result" style="min-height: 320px;"></div>
 
 <script>
-const elo = {"Anders": 1547, "Erik": 1517, "Carsten": 1516, "Bo": 1498, "Dennis": 1422};
-const pairCounts = {"Anders & Erik": 2, "Anders & Bo": 3, "Anders & Carsten": 2, "Carsten & Erik": 2, "Bo & Carsten": 2, "Carsten & Dennis": 1, "Bo & Erik": 2, "Bo & Dennis": 1, "Anders & Dennis": 2, "Dennis & Erik": 1};
-const eloHistory = {"Anders": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1516, "won": true}, {"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1532, "won": true}, {"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1548, "won": true}, {"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1531, "won": false}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1546, "won": true}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1531, "won": false}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1547, "won": true}], "Bo": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1516, "won": true}, {"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1500, "won": false}, {"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1484, "won": false}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1499, "won": true}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1515, "won": true}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1498, "won": false}], "Carsten": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1484, "won": false}, {"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1500, "won": true}, {"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1517, "won": true}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1532, "won": true}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1516, "won": false}], "Dennis": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1484, "won": false}, {"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1469, "won": false}, {"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1452, "won": false}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1437, "won": false}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1422, "won": false}], "Erik": [{"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1484, "won": false}, {"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1499, "won": true}, {"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1515, "won": true}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1500, "won": false}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1517, "won": true}]};
+const venueData = {"begge": {"elo": {"Anders": 1547, "Erik": 1517, "Carsten": 1516, "Bo": 1498, "Dennis": 1422}, "pairCounts": {"Anders & Erik": 2, "Anders & Bo": 3, "Anders & Carsten": 2, "Carsten & Erik": 2, "Bo & Carsten": 2, "Carsten & Dennis": 1, "Bo & Erik": 2, "Bo & Dennis": 1, "Anders & Dennis": 2, "Dennis & Erik": 1}, "eloHistory": {"Anders": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1516, "won": true}, {"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1532, "won": true}, {"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1548, "won": true}, {"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1531, "won": false}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1546, "won": true}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1531, "won": false}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1547, "won": true}], "Bo": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1516, "won": true}, {"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1500, "won": false}, {"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1484, "won": false}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1499, "won": true}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1515, "won": true}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1498, "won": false}], "Carsten": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1484, "won": false}, {"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1500, "won": true}, {"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1517, "won": true}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1532, "won": true}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1516, "won": false}], "Dennis": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1484, "won": false}, {"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1469, "won": false}, {"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1452, "won": false}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1437, "won": false}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1422, "won": false}], "Erik": [{"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1484, "won": false}, {"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1499, "won": true}, {"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1515, "won": true}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1500, "won": false}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1517, "won": true}]}}, "inde": {"elo": {"Anders": 1561, "Erik": 1516, "Bo": 1500, "Carsten": 1469, "Dennis": 1453}, "pairCounts": {"Anders & Bo": 2, "Anders & Erik": 2, "Carsten & Dennis": 1, "Bo & Dennis": 1, "Dennis & Erik": 1, "Bo & Carsten": 1, "Bo & Erik": 1, "Anders & Carsten": 1}, "eloHistory": {"Anders": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1516, "won": true}, {"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1532, "won": true}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1547, "won": true}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1561, "won": true}], "Bo": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1516, "won": true}, {"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1500, "won": false}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1515, "won": true}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1500, "won": false}], "Carsten": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1484, "won": false}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1469, "won": false}], "Dennis": [{"date": "15/01/2026", "date_sortable": "2026-01-15", "elo": 1484, "won": false}, {"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1468, "won": false}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1453, "won": false}], "Erik": [{"date": "05/02/2026", "date_sortable": "2026-02-05", "elo": 1516, "won": true}, {"date": "26/02/2026", "date_sortable": "2026-02-26", "elo": 1501, "won": false}, {"date": "19/03/2026", "date_sortable": "2026-03-19", "elo": 1516, "won": true}]}}, "ude": {"elo": {"Carsten": 1548, "Erik": 1500, "Bo": 1499, "Anders": 1484, "Dennis": 1468}, "pairCounts": {"Anders & Carsten": 1, "Bo & Carsten": 1, "Carsten & Erik": 2, "Bo & Erik": 1, "Anders & Dennis": 2, "Anders & Bo": 1}, "eloHistory": {"Anders": [{"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1516, "won": true}, {"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1500, "won": false}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1484, "won": false}], "Carsten": [{"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1516, "won": true}, {"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1532, "won": true}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1548, "won": true}], "Bo": [{"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1484, "won": false}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1499, "won": true}], "Erik": [{"date": "22/01/2026", "date_sortable": "2026-01-22", "elo": 1484, "won": false}, {"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1500, "won": true}], "Dennis": [{"date": "12/02/2026", "date_sortable": "2026-02-12", "elo": 1484, "won": false}, {"date": "05/03/2026", "date_sortable": "2026-03-05", "elo": 1468, "won": false}]}}};
+let currentVenue = "begge";
+function activeData() { return venueData[currentVenue]; }
+function activeElo() { return activeData().elo; }
+function activePairCounts() { return activeData().pairCounts; }
+function activeEloHistory() { return activeData().eloHistory; }
+
 const grid = document.getElementById('player-grid');
 const result = document.getElementById('matchup-result');
 const selected = new Set();
@@ -601,7 +1068,7 @@ function pairKey(a, b) {
   return [a, b].sort().join(' & ');
 }
 
-Object.keys(elo).sort().forEach(name => {
+Object.keys(venueData.begge.elo).sort().forEach(name => {
   const btn = document.createElement('button');
   btn.className = 'player-btn';
   btn.textContent = name;
@@ -619,8 +1086,22 @@ Object.keys(elo).sort().forEach(name => {
   grid.appendChild(btn);
 });
 
+document.querySelectorAll('.venue-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentVenue = btn.dataset.venue;
+    document.querySelectorAll('.venue-btn').forEach(b =>
+      b.classList.toggle('selected', b.dataset.venue === currentVenue));
+    document.querySelectorAll('.venue-panel').forEach(p =>
+      p.toggleAttribute('hidden', p.dataset.venue !== currentVenue));
+    if (selected.size === 4) recommend();
+    if (typeof redrawEloChart === 'function') redrawEloChart();
+  });
+});
+
 function recommend() {
   const players = [...selected];
+  const elo = activeElo();
+  const pairCounts = activePairCounts();
   const pairings = [
     [[players[0], players[1]], [players[2], players[3]]],
     [[players[0], players[2]], [players[1], players[3]]],
@@ -631,8 +1112,8 @@ function recommend() {
   // Novelty: prefer pairs that have played together fewer times
   // Balance: prefer close Elo matchups
   const scored = pairings.map(([teamA, teamB]) => {
-    const eloA = (elo[teamA[0]] + elo[teamA[1]]) / 2;
-    const eloB = (elo[teamB[0]] + elo[teamB[1]]) / 2;
+    const eloA = ((elo[teamA[0]] ?? 1500) + (elo[teamA[1]] ?? 1500)) / 2;
+    const eloB = ((elo[teamB[0]] ?? 1500) + (elo[teamB[1]] ?? 1500)) / 2;
     const eloDiff = Math.abs(eloA - eloB);
 
     const pairsPlayed = (pairCounts[pairKey(teamA[0], teamA[1])] || 0)
@@ -725,6 +1206,10 @@ document.querySelectorAll('table').forEach(table => {
   const colors = ['#38bdf8', '#fbbf24', '#4ade80', '#f87171', '#a78bfa', '#fb923c', '#2dd4bf', '#f472b6'];
   const chartPlayers = new Map(); // name -> colorIndex
 
+  window.redrawEloChart = function() {
+    if (chartPlayers.size > 0) drawChart();
+  };
+
   closeBtn.addEventListener('click', () => {
     chartPlayers.clear();
     container.classList.remove('visible');
@@ -769,7 +1254,7 @@ document.querySelectorAll('table').forEach(table => {
     // Build unified date axis from all selected players
     const dateMap = new Map(); // date_sortable -> display date
     players.forEach(name => {
-      (eloHistory[name] || []).forEach(d => {
+      (activeEloHistory()[name] || []).forEach(d => {
         if (!dateMap.has(d.date_sortable)) dateMap.set(d.date_sortable, d.date);
       });
     });
@@ -779,7 +1264,7 @@ document.querySelectorAll('table').forEach(table => {
     // Compute Y range across all selected players
     let allElos = [1500];
     players.forEach(name => {
-      (eloHistory[name] || []).forEach(d => allElos.push(d.elo));
+      (activeEloHistory()[name] || []).forEach(d => allElos.push(d.elo));
     });
     let minElo = Math.min(...allElos);
     let maxElo = Math.max(...allElos);
@@ -838,7 +1323,7 @@ document.querySelectorAll('table').forEach(table => {
 
     // Draw each player's line and points
     players.forEach(name => {
-      const data = eloHistory[name] || [];
+      const data = activeEloHistory()[name] || [];
       const color = colors[chartPlayers.get(name) % colors.length];
 
       // Line
@@ -877,7 +1362,7 @@ document.querySelectorAll('table').forEach(table => {
     // Legend
     legendEl.innerHTML = players.map(name => {
       const color = colors[chartPlayers.get(name) % colors.length];
-      const data = eloHistory[name] || [];
+      const data = activeEloHistory()[name] || [];
       const current = data.length ? data[data.length - 1].elo : '?';
       return `<span class="legend-item"><span class="legend-swatch" style="background:${color}"></span>${name} (${current})</span>`;
     }).join('');
