@@ -36,11 +36,31 @@ def test_symmetric_changes():
     assert elos["A"] - 1500 == 1500 - elos["C"]
 
 
-def test_draw_skipped():
+def test_draw_between_equal_teams_no_change():
     m = _match(["A", "B"], ["C", "D"], "draw")
     result, history = compute_elo([m])
-    assert result == []
-    assert dict(history) == {}
+    elos = {p["name"]: p["elo"] for p in result}
+    assert elos == {"A": 1500, "B": 1500, "C": 1500, "D": 1500}
+    # All four players are present in history with one entry each
+    assert {name: len(entries) for name, entries in history.items()} == {
+        "A": 1, "B": 1, "C": 1, "D": 1,
+    }
+
+
+def test_draw_underdog_gains_favourite_loses():
+    # First match makes A & B the favourites
+    matches = [
+        _match(["A", "B"], ["C", "D"], "A", "2026-01-01"),
+        _match(["A", "B"], ["C", "D"], "draw", "2026-01-02"),
+    ]
+    result, _ = compute_elo(matches)
+    elos = {p["name"]: p["elo"] for p in result}
+    after_first = 1500 + 16  # K/2 for two equal-rated teams
+    # After the draw the underdogs (C, D) gain and favourites (A, B) lose by
+    # the same symmetric amount.
+    assert elos["A"] < after_first
+    assert elos["C"] > 1500 - 16
+    assert (after_first - elos["A"]) == (elos["C"] - (1500 - 16))
 
 
 def test_history_tracks_each_match():

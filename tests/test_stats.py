@@ -94,3 +94,18 @@ def test_draw_not_counted_as_win_or_loss():
     assert lb["A"]["matches_played"] == 1
     assert lb["A"]["matches_won"] == 0
     assert lb["A"]["matches_lost"] == 0
+    assert lb["A"]["matches_drawn"] == 1
+    assert lb["C"]["matches_drawn"] == 1
+
+
+def test_draw_breaks_streak():
+    matches = [
+        _match(["A", "B"], ["C", "D"], [(6, 3)], "A"),
+        _match(["A", "B"], ["C", "D"], [(6, 3)], "A"),
+        _match(["A", "B"], ["C", "D"], [(6, 3), (3, 6)], "draw"),
+        _match(["A", "B"], ["C", "D"], [(6, 3)], "A"),
+    ]
+    lb = {p["name"]: p for p in compute_player_stats(matches)}
+    assert lb["A"]["best_streak"] == 2
+    assert lb["A"]["current_win_streak"] == 1
+    assert lb["A"]["current_lose_streak"] == 0

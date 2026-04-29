@@ -167,12 +167,13 @@
       <th class="sortable" data-col="2">K</th>
       <th class="sortable" data-col="3">V</th>
       <th class="sortable" data-col="4">T</th>
-      <th class="sortable" data-col="5">V%</th>
-      <th class="sortable" data-col="6">Sæt</th>
-      <th class="sortable" data-col="7">Partier</th>
-      <th class="sortable" data-col="8" title="Antal 6-0 sæt givet / modtaget">Æg</th>
-      <th class="sortable" data-col="9">Streak</th>
-      <th class="sortable" data-col="10">Bedste</th>
+      <th class="sortable" data-col="5">U</th>
+      <th class="sortable" data-col="6">V%</th>
+      <th class="sortable" data-col="7">Sæt</th>
+      <th class="sortable" data-col="8">Partier</th>
+      <th class="sortable" data-col="9" title="Antal 6-0 sæt givet / modtaget">Æg</th>
+      <th class="sortable" data-col="10">Streak</th>
+      <th class="sortable" data-col="11">Bedste</th>
     </tr>
   </thead>
   <tbody>
@@ -183,6 +184,7 @@
       <td data-sort="{{ p.matches_played }}">{{ p.matches_played }}</td>
       <td class="win" data-sort="{{ p.matches_won }}">{{ p.matches_won }}</td>
       <td class="loss" data-sort="{{ p.matches_lost }}">{{ p.matches_lost }}</td>
+      <td class="muted" data-sort="{{ p.matches_drawn }}">{{ p.matches_drawn }}</td>
       <td class="pct" data-sort="{{ p.win_pct }}">{{ "%.0f"|format(p.win_pct) }}%</td>
       <td data-sort="{{ p.sets_won - p.sets_lost }}">{{ p.sets_won }}-{{ p.sets_lost }}</td>
       <td data-sort="{{ p.games_won - p.games_lost }}">{{ p.games_won }}-{{ p.games_lost }}</td>
@@ -226,7 +228,8 @@
       <th class="sortable" data-col="1">K</th>
       <th class="sortable" data-col="2">V</th>
       <th class="sortable" data-col="3">T</th>
-      <th class="sortable" data-col="4">V%</th>
+      <th class="sortable" data-col="4">U</th>
+      <th class="sortable" data-col="5">V%</th>
     </tr>
   </thead>
   <tbody>
@@ -236,6 +239,7 @@
       <td data-sort="{{ p.played }}">{{ p.played }}</td>
       <td class="win" data-sort="{{ p.won }}">{{ p.won }}</td>
       <td class="loss" data-sort="{{ p.lost }}">{{ p.lost }}</td>
+      <td class="muted" data-sort="{{ p.drawn }}">{{ p.drawn }}</td>
       <td class="pct" data-sort="{{ p.win_pct }}">{{ "%.0f"|format(p.win_pct) }}%</td>
     </tr>
     {% endfor %}
