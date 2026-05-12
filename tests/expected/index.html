@@ -316,7 +316,7 @@
   </tbody>
 </table>
 
-<h2>Makkerpar</h2>
+<h2 class="makkerpar-heading">Makkerpar</h2>
 <table>
   <thead>
     <tr>
@@ -579,7 +579,7 @@
   </tbody>
 </table>
 
-<h2>Makkerpar</h2>
+<h2 class="makkerpar-heading">Makkerpar</h2>
 <table>
   <thead>
     <tr>
@@ -824,7 +824,7 @@
   </tbody>
 </table>
 
-<h2>Makkerpar</h2>
+<h2 class="makkerpar-heading">Makkerpar</h2>
 <table>
   <thead>
     <tr>
@@ -1139,6 +1139,7 @@ document.querySelectorAll('.venue-btn').forEach(btn => {
     document.querySelectorAll('.venue-panel').forEach(p =>
       p.toggleAttribute('hidden', p.dataset.venue !== currentVenue));
     if (selected.size === 4) recommend();
+    if (typeof window.relocateEloChart === 'function') window.relocateEloChart();
     if (typeof redrawEloChart === 'function') redrawEloChart();
   });
 });
@@ -1288,10 +1289,24 @@ document.querySelectorAll('table').forEach(table => {
       container.classList.remove('visible');
       return;
     }
+    relocateChart();
     container.classList.add('visible');
     drawChart();
     container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
+
+  function relocateChart() {
+    const panel = document.querySelector('.venue-panel:not([hidden])');
+    if (!panel) return;
+    const anchor = panel.querySelector('.makkerpar-heading');
+    if (anchor && container.parentNode !== panel) {
+      panel.insertBefore(container, anchor);
+    } else if (anchor && container.nextSibling !== anchor) {
+      panel.insertBefore(container, anchor);
+    }
+  }
+
+  window.relocateEloChart = relocateChart;
 
   function drawChart() {
     const players = [...chartPlayers.keys()];
