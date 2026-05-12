@@ -262,8 +262,9 @@
   <thead>
     <tr>
       <th class="sortable" data-col="0">Dato</th>
-      <th class="sortable" data-col="1">Hold A</th>
-      <th class="sortable" data-col="2">Hold B</th>
+      <th class="sortable" data-col="1">Sted</th>
+      <th class="sortable" data-col="2">Hold A</th>
+      <th class="sortable" data-col="3">Hold B</th>
       <th>Sæt</th>
       <th>Resultat</th>
     </tr>
@@ -272,6 +273,7 @@
     {% for m in matches|reverse %}
     <tr>
       <td data-sort="{{ m.date_sortable }}">{{ m.date }}</td>
+      <td>{{ m.sted }}</td>
       <td{% if m.winner == 'A' %} class="win"{% endif %}>{{ m.team_a|join(' & ') }}</td>
       <td{% if m.winner == 'B' %} class="win"{% endif %}>{{ m.team_b|join(' & ') }}</td>
       <td class="set-score">
