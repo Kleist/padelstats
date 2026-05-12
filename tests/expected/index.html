@@ -1310,9 +1310,13 @@ document.querySelectorAll('table').forEach(table => {
 
   function drawChart() {
     const players = [...chartPlayers.keys()];
+    const START_SORTABLE = '2026-01-01';
+    const START_DISPLAY = '01/01/2026';
+    const STEP = 25;
 
-    // Build unified date axis from all selected players
-    const dateMap = new Map(); // date_sortable -> display date
+    // Build unified date axis from all selected players, anchored at 1500 on 2026-01-01
+    const dateMap = new Map();
+    dateMap.set(START_SORTABLE, START_DISPLAY);
     players.forEach(name => {
       (activeEloHistory()[name] || []).forEach(d => {
         if (!dateMap.has(d.date_sortable)) dateMap.set(d.date_sortable, d.date);
@@ -1321,16 +1325,13 @@ document.querySelectorAll('table').forEach(table => {
     const allDates = [...dateMap.keys()].sort();
     const dateIndex = new Map(allDates.map((d, i) => [d, i]));
 
-    // Compute Y range across all selected players
+    // Compute Y range across all selected players, snapped to multiples of STEP
     let allElos = [1500];
     players.forEach(name => {
       (activeEloHistory()[name] || []).forEach(d => allElos.push(d.elo));
     });
-    let minElo = Math.min(...allElos);
-    let maxElo = Math.max(...allElos);
-    const range = maxElo - minElo || 100;
-    minElo -= range * 0.1;
-    maxElo += range * 0.1;
+    let minElo = Math.floor(Math.min(...allElos) / STEP) * STEP - STEP;
+    let maxElo = Math.ceil(Math.max(...allElos) / STEP) * STEP + STEP;
 
     // Canvas setup
     const dpr = window.devicePixelRatio || 1;
@@ -1353,11 +1354,10 @@ document.querySelectorAll('table').forEach(table => {
 
     ctx.clearRect(0, 0, W, H);
 
-    // Grid lines
+    // Grid lines at multiples of STEP
     ctx.strokeStyle = '#334155';
     ctx.lineWidth = 0.5;
-    for (let i = 0; i <= 5; i++) {
-      const val = minElo + (maxElo - minElo) * (i / 5);
+    for (let val = minElo; val <= maxElo; val += STEP) {
       const yy = y(val);
       ctx.beginPath();
       ctx.moveTo(pad.left, yy);
@@ -1366,7 +1366,7 @@ document.querySelectorAll('table').forEach(table => {
       ctx.fillStyle = '#94a3b8';
       ctx.font = '11px -apple-system, sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(Math.round(val), pad.left - 8, yy + 4);
+      ctx.fillText(val, pad.left - 8, yy + 4);
     }
 
     // 1500 baseline
@@ -1381,9 +1381,10 @@ document.querySelectorAll('table').forEach(table => {
       ctx.setLineDash([]);
     }
 
-    // Draw each player's line and points
+    // Draw each player's line and points (anchored at 1500 on 2026-01-01)
     players.forEach(name => {
-      const data = activeEloHistory()[name] || [];
+      const history = activeEloHistory()[name] || [];
+      const data = [{ date_sortable: START_SORTABLE, elo: 1500 }, ...history];
       const color = colors[chartPlayers.get(name) % colors.length];
 
       // Line
@@ -1423,7 +1424,7 @@ document.querySelectorAll('table').forEach(table => {
     legendEl.innerHTML = players.map(name => {
       const color = colors[chartPlayers.get(name) % colors.length];
       const data = activeEloHistory()[name] || [];
-      const current = data.length ? data[data.length - 1].elo : '?';
+      const current = data.length ? data[data.length - 1].elo : 1500;
       return `<span class="legend-item"><span class="legend-swatch" style="background:${color}"></span>${name} (${current})</span>`;
     }).join('');
   }
