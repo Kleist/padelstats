@@ -7,7 +7,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Match, Player
-from app.sheet_import import import_rows
+from app.sheet_import import db_matches, import_rows, verify
+from build import build_venue_data, parse_matches
 from tests.conftest import SAMPLE_ROWS
 
 
@@ -38,6 +39,15 @@ def test_import_creates_matches_and_players(session, rows):
     assert [(s.games_a, s.games_b) for s in first.sets] == [(6, 3), (6, 0)]
 
 
+def test_stats_from_database_equal_stats_from_sheet(session, rows):
+    import_rows(session, rows)
+    assert verify(session, rows) == []
+    from_sheet, from_db = build_venue_data(parse_matches(rows)), build_venue_data(db_matches(session))
+    for venue in from_sheet:
+        for key in ("leaderboard", "elo", "pairs", "elo_dict", "pair_counts"):
+            assert from_db[venue][key] == from_sheet[venue][key], (venue, key)
+
+
 def test_reimport_is_idempotent(session, rows):
     import_rows(session, rows)
     report = import_rows(session, rows)
@@ -58,6 +68,7 @@ def test_reimport_syncs_edits_additions_and_deletions(session, rows):
     report = import_rows(session, rows)
     assert (report.created, report.updated, report.unchanged, report.deleted) == (0, 7, 2, 1)
     assert count(session, Match) == 9
+    assert verify(session, rows) == []
     assert session.scalar(select(Match).where(Match.sheet_row == 3)).sets[0].games_b == 4
 
 
@@ -70,6 +81,8 @@ def test_import_leaves_app_matches_alone(session, rows, logged_in):
     import_rows(session, rows)
     import_rows(session, rows[:5])  # rows deleted from the sheet are removed, the app match is kept
     assert count(session, Match) == 4
+    assert len(db_matches(session)) == 4
+    assert len(db_matches(session, imported_only=True)) == 3
 
 
 def test_bad_rows_are_skipped_and_reported(session, rows):
@@ -84,3 +97,13 @@ def test_bad_rows_are_skipped_and_reported(session, rows):
         "row 14: set score 6-12 out of range 0-7",
     ]
     assert count(session, Match) == 9
+    assert verify(session, rows) == []
+
+
+def test_verify_reports_differences(session, rows):
+    import_rows(session, rows)
+    session.scalar(select(Match).where(Match.sheet_row == 3)).sets[0].games_a = 2
+    session.commit()
+    differences = verify(session, rows)
+    assert differences[0].startswith("match 1:")
+    assert "begge/leaderboard differs" in differences

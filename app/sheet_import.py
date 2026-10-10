@@ -1,4 +1,4 @@
-"""Import matches from the Google Sheet into the database.
+"""Import matches from the Google Sheet into the database, and check the result.
 
 The import is idempotent: each sheet row is stored with its row number (``Match.sheet_row``), so
 re-running it updates changed rows, adds new ones and removes rows deleted from the sheet.
@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.main import get_or_create_player
 from app.models import Match, MatchSet
-from build import parse_row
+from build import build_venue_data, parse_row
 
 HEADER_ROWS = 2  # same as parse_matches
 
@@ -108,3 +108,51 @@ def import_rows(session: Session, rows) -> ImportReport:
 
     session.commit()
     return report
+
+
+def db_rows(session: Session, imported_only=False):
+    """All matches in the database as sheet-style rows, in the order the stats should process them.
+
+    Sheet order is kept for imported matches; app-entered matches follow, by date.
+    """
+    query = select(Match).order_by(Match.sheet_row.is_(None), Match.sheet_row, Match.played_on, Match.id)
+    if imported_only:
+        query = query.where(Match.sheet_row.is_not(None))
+    rows = []
+    for m in session.scalars(query).unique():
+        scores = [str(v) for s in m.sets for v in (s.games_a, s.games_b)]
+        rows.append([m.played_on.strftime("%d/%m/%Y"), m.venue, m.a1.name, m.a2.name, m.b1.name, m.b2.name, *scores])
+    return rows
+
+
+def db_matches(session: Session, imported_only=False):
+    """Match dicts (as from build.parse_matches) computed from the database."""
+    return [parse_row(row) for row in db_rows(session, imported_only)]
+
+
+def _comparable(venue_data):
+    """Stats with the display-only date string removed (the sheet may format dates differently)."""
+    for d in venue_data.values():
+        d["elo_history"] = {
+            p: [{k: v for k, v in e.items() if k != "date"} for e in hist] for p, hist in d["elo_history"].items()
+        }
+    return venue_data
+
+
+def verify(session: Session, rows):
+    """Compare stats from the sheet with stats from the imported matches. Returns a list of differences."""
+    valid = [m for _, m in sheet_matches(rows) if validate(m) is None]
+    from_db = db_matches(session, imported_only=True)
+    differences = []
+    if len(valid) != len(from_db):
+        differences.append(f"sheet has {len(valid)} valid matches, database has {len(from_db)} imported")
+    for i, (a, b) in enumerate(zip(valid, from_db)):
+        a, b = dict(a, date=None), dict(b, date=None)
+        if a != b:
+            differences.append(f"match {i + 1}: sheet {a} != database {b}")
+    sheet_stats, db_stats = _comparable(build_venue_data(valid)), _comparable(build_venue_data(from_db))
+    for venue in sheet_stats:
+        for key in sheet_stats[venue]:
+            if sheet_stats[venue][key] != db_stats[venue][key]:
+                differences.append(f"{venue}/{key} differs")
+    return differences
