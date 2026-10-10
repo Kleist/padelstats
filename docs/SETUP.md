@@ -39,6 +39,18 @@ The **deploy** job creates the Fly app, stores the secrets on it, runs database 
 Open <https://padelstats-kleist.fly.dev>, tap **+ Indtast kamp**, log in, enter a match. 🎾
 Tip: in the browser menu, choose **Add to Home Screen**.
 
+## 5. Staging (optional): try a PR before merging
+
+Every pull request can deploy to a separate staging app, <https://padelstats-kleist-staging.fly.dev>, which uses its own database so production data is never touched.
+
+1. In Neon, open the project → **Branches → Create branch**. Name it `staging` and create it from `main`. You get a copy of the production data, and it doesn't cost extra while idle.
+2. Click **Connect** on the `staging` branch, turn **Connection pooling off**, and copy the connection string.
+3. Add it as a repository secret named `STAGING_DATABASE_URL`.
+
+Each push to a PR then runs tests and deploys the PR to staging. Migrations run against the staging database only. The PR page shows a **View deployment** button. Staging uses the same `ADMIN_PASSWORD` and has its own login cookie. There is only one staging app, so the most recently pushed PR is the one running there. To refresh the staging data from production, reset the `staging` branch from its parent in Neon.
+
+Without `STAGING_DATABASE_URL`, the staging deploy is skipped with a warning.
+
 ## Troubleshooting
 
 - **Deploy job says "FLY_API_TOKEN secret is not set"** — step 3 is missing; the tests still ran.
@@ -51,7 +63,7 @@ Tip: in the browser menu, choose **Add to Home Screen**.
 Watch the app's logs while you try to log in:
 
 ```bash
-fly logs -a padelstats-kleist
+fly logs -a padelstats-kleist          # or padelstats-kleist-staging
 ```
 
 (or Fly dashboard → your app → **Logs & Errors**). Each failed login logs a reason, never the password itself:
