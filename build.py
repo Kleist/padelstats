@@ -27,60 +27,67 @@ def parse_matches(rows):
     """Parse raw sheet rows into match dicts."""
     matches = []
     for row in rows[2:]:  # skip header rows
-        if len(row) < 8:
-            continue
-        date = row[0]
-        sted = row[1].strip()
-        team_a = [row[2].strip(), row[3].strip()]
-        team_b = [row[4].strip(), row[5].strip()]
-
-        sets = []
-        for i in range(6, len(row) - 1, 2):
-            try:
-                score_a = int(row[i])
-                score_b = int(row[i + 1])
-                sets.append((score_a, score_b))
-            except (ValueError, IndexError):
-                break
-
-        def is_set_won(winner_score, loser_score):
-            return winner_score == 7 or (winner_score == 6 and loser_score <= 4)
-
-        sets_won_a = sum(1 for sa, sb in sets if is_set_won(sa, sb))
-        sets_won_b = sum(1 for sa, sb in sets if is_set_won(sb, sa))
-        games_a = sum(sa for sa, sb in sets)
-        games_b = sum(sb for sa, sb in sets)
-
-        if sets_won_a > sets_won_b:
-            winner = "A"
-        elif sets_won_b > sets_won_a:
-            winner = "B"
-        else:
-            winner = "draw"
-
-        # Parse date for sortable ISO format (handles DD/MM/YYYY and DD-MM-YYYY)
-        date_sortable = date
-        for sep in ('/', '-', '.'):
-            parts = date.split(sep)
-            if len(parts) == 3:
-                try:
-                    date_sortable = f"{int(parts[2]):04d}-{int(parts[1]):02d}-{int(parts[0]):02d}"
-                except ValueError:
-                    pass
-                break
-
-        matches.append({
-            "date": date,
-            "date_sortable": date_sortable,
-            "sted": sted,
-            "team_a": team_a,
-            "team_b": team_b,
-            "sets": sets,
-            "sets_won": (sets_won_a, sets_won_b),
-            "games": (games_a, games_b),
-            "winner": winner,
-        })
+        match = parse_row(row)
+        if match is not None:
+            matches.append(match)
     return matches
+
+
+def parse_row(row):
+    """Parse one sheet row into a match dict, or None if the row is too short to be a match."""
+    if len(row) < 8:
+        return None
+    date = row[0]
+    sted = row[1].strip()
+    team_a = [row[2].strip(), row[3].strip()]
+    team_b = [row[4].strip(), row[5].strip()]
+
+    sets = []
+    for i in range(6, len(row) - 1, 2):
+        try:
+            score_a = int(row[i])
+            score_b = int(row[i + 1])
+            sets.append((score_a, score_b))
+        except (ValueError, IndexError):
+            break
+
+    def is_set_won(winner_score, loser_score):
+        return winner_score == 7 or (winner_score == 6 and loser_score <= 4)
+
+    sets_won_a = sum(1 for sa, sb in sets if is_set_won(sa, sb))
+    sets_won_b = sum(1 for sa, sb in sets if is_set_won(sb, sa))
+    games_a = sum(sa for sa, sb in sets)
+    games_b = sum(sb for sa, sb in sets)
+
+    if sets_won_a > sets_won_b:
+        winner = "A"
+    elif sets_won_b > sets_won_a:
+        winner = "B"
+    else:
+        winner = "draw"
+
+    # Parse date for sortable ISO format (handles DD/MM/YYYY and DD-MM-YYYY)
+    date_sortable = date
+    for sep in ('/', '-', '.'):
+        parts = date.split(sep)
+        if len(parts) == 3:
+            try:
+                date_sortable = f"{int(parts[2]):04d}-{int(parts[1]):02d}-{int(parts[0]):02d}"
+            except ValueError:
+                pass
+            break
+
+    return {
+        "date": date,
+        "date_sortable": date_sortable,
+        "sted": sted,
+        "team_a": team_a,
+        "team_b": team_b,
+        "sets": sets,
+        "sets_won": (sets_won_a, sets_won_b),
+        "games": (games_a, games_b),
+        "winner": winner,
+    }
 
 
 VENUES = ["begge", "inde", "ude"]
