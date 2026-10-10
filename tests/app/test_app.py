@@ -52,6 +52,13 @@ def test_create_match(logged_in):
     assert logged_in.get("/healthz/db").json()["matches"] == 1
 
 
+def test_six_sets(logged_in):
+    six = {f"s{i}{side}": v for i in range(1, 7) for side, v in (("a", "6"), ("b", "4"))}
+    assert 'name="s6a"' in logged_in.get("/ny").text
+    resp = logged_in.post("/ny", data={**MATCH, **six})
+    assert "6-4 6-4 6-4 6-4 6-4 6-4" in logged_in.get(resp.url).text
+
+
 def test_players_are_reused_case_insensitively(logged_in):
     logged_in.post("/ny", data=MATCH)
     logged_in.post("/ny", data={**MATCH, "a1": "anders"})
