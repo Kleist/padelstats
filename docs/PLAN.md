@@ -23,7 +23,7 @@
 | Schema changes | **Alembic migrations** | Every schema change is a reviewed file in git; applied automatically on deploy. CI fails if models and migrations drift. |
 | Hosting | **[Fly.io](https://fly.io)** | Runs our Docker image, scales to zero when idle (pay only while running), deploys from GitHub Actions with a single token. No server to maintain. |
 | CI/CD | **GitHub Actions** | Already used. Tests run against a real Postgres. Deploy runs migrations first, then smoke-tests the live URL for the exact commit. |
-| Login | **Shared password → signed cookie (1 year)** | Simplest thing that keeps randoms out. Per-player logins can come later. |
+| Login | **Shared password → signed cookie (1 year)** | Only needed to *enter* results; stats are public. Replaced by per-player logins in Phase 4. |
 
 ### Expected cost
 
@@ -52,7 +52,7 @@
 
 Proves the whole pipeline: phone → web app → database → automatic deploys.
 
-- FastAPI app (`app/`): list of latest matches, login, mobile form to enter a match (date, inde/ude, 4 players with autocomplete, up to 3 sets).
+- FastAPI app (`app/`): list of latest matches, login, mobile form to enter a match (date, inde/ude, 4 players with autocomplete, up to 6 sets).
 - Postgres schema (`players`, `matches`, `match_sets`) via Alembic.
 - `/healthz` and `/healthz/db` endpoints reporting the deployed commit.
 - `.github/workflows/app.yml`: lint → tests on Postgres → migration check → deploy to Fly → smoke test.
@@ -81,12 +81,15 @@ Proves the whole pipeline: phone → web app → database → automatic deploys.
 ### Phase 4 — Nice to have
 
 - Edit/delete a match (with an audit log of who changed what).
-- Per-player login (magic link by email) instead of one shared password.
+- **Per-player login** (decided): magic link by email instead of one shared password. Each match records who entered it. Stats stay public — login only gates entering/editing results.
 - "Add to home screen" (PWA icon + manifest).
 - **PR previews**: each PR gets its own Fly app + Neon branch with a copy of the data, link posted on the PR — so you can try changes on the phone before merging.
 
+## Decisions
+
+- **Stats are public** — no login needed to view anything. Login only gates entering (and later editing) results.
+- **Player logins later** — shared password for now; per-player logins in Phase 4.
+
 ## Open questions
 
-- Who should be able to enter results — everyone with the shared password, or individual logins?
-- Should the public stats be visible without login (today they are)?
 - Own domain or `*.fly.dev`?

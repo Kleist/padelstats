@@ -17,7 +17,7 @@ from app.models import Match, MatchSet, Player
 
 VERSION = os.environ.get("GIT_SHA", "dev")
 VENUES = ["Inde", "Ude"]
-MAX_SETS = 3
+MAX_SETS = 6
 ONE_YEAR = 365 * 24 * 3600
 
 app = FastAPI(title="Padel Stats", docs_url=None, redoc_url=None)
