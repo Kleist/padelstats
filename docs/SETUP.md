@@ -61,6 +61,17 @@ Uses the `GOOGLE_SHEETS_API_KEY` and `SPREADSHEET_ID` secrets the GitHub Pages s
 
 Target `staging` imports into the staging database instead (needs `STAGING_DATABASE_URL`).
 
+## 7. Backups
+
+**Database backup** runs every night and stores a `pg_dump` of production as an artifact (kept 90 days): **Actions → Database backup → latest run → Artifacts**. Run it by hand once to check it works.
+If the repository is public, any logged-in GitHub user can download these artifacts. They hold only player names and results, which are public anyway.
+
+To restore a backup (e.g. into a new Neon branch), unzip the artifact and run:
+
+```bash
+pg_restore --no-owner --no-acl --clean --if-exists -d "<connection string>" padelstats-<date>.dump
+```
+
 ## Troubleshooting
 
 - **Deploy job says "FLY_API_TOKEN secret is not set"** — step 3 is missing; the tests still ran.

@@ -22,6 +22,7 @@ A web app (`app/`) backed by Postgres is being built to replace the Sheet: playe
 - Login: shared `ADMIN_PASSWORD` → signed session cookie (`SESSION_SECRET`); `COOKIE_SECURE=0` for plain-http local runs
 - Hosting: Fly.io (`fly.toml`, `Dockerfile`); migrations run as Fly `release_command`
 - Sheet import: `app/sheet_import.py` + `scripts/import_sheet.py` (idempotent via `matches.sheet_row`, verifies stats DB == Sheet); run via the manual **Import from Google Sheet** workflow (`.github/workflows/import.yml`)
+- Backups: nightly `pg_dump` artifact (`.github/workflows/backup.yml`)
 
 ## Build & run
 
