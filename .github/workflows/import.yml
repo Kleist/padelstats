@@ -1,0 +1,56 @@
+name: Import from Google Sheet
+
+# Run by hand (Actions → Import from Google Sheet → Run workflow). Safe to re-run until cut-over:
+# changed sheet rows are updated, matches entered in the app are left alone.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Database to import into
+        type: choice
+        options: [production, staging]
+        default: production
+      dry_run:
+        description: Only show what would change
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: import-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only import into production from main
+        if: inputs.target == 'production' && github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run this workflow from main to import into production (it applies main's migrations)."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-root
+
+      - name: Import and verify
+        env:
+          DATABASE_URL: ${{ inputs.target == 'staging' && secrets.STAGING_DATABASE_URL || secrets.DATABASE_URL }}
+          GOOGLE_SHEETS_API_KEY: ${{ secrets.GOOGLE_SHEETS_API_KEY }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then echo "::error::Database secret for ${{ inputs.target }} is not set. See docs/SETUP.md."; exit 1; fi
+          set -o pipefail
+          poetry run alembic upgrade head
+          poetry run python scripts/import_sheet.py ${{ inputs.dry_run && '--dry-run' || '' }} | tee -a "$GITHUB_STEP_SUMMARY"
