@@ -1,0 +1,45 @@
+name: Database backup
+
+# Nightly pg_dump of the production database, kept as a workflow artifact for 90 days
+# (Neon's free tier only keeps a short restore window). Restore: see docs/SETUP.md.
+on:
+  schedule:
+    - cron: '30 2 * * *'  # daily at 02:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Check that the database is configured
+        id: configured
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::warning::DATABASE_URL secret is not set — skipping backup. See docs/SETUP.md."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dump database
+        if: steps.configured.outputs.ok == 'true'
+        run: |
+          file="padelstats-$(date -u +%Y-%m-%dT%H%MZ).dump"
+          # pg_dump from the newest Postgres image: it can dump any older server version.
+          docker run --rm -e DATABASE_URL -v "$PWD:/out" postgres:18 \
+            sh -c "pg_dump --format=custom --no-owner --no-acl --dbname=\"\$DATABASE_URL\" --file=/out/$file"
+          ls -l "$file"
+          echo "FILE=$file" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.configured.outputs.ok == 'true'
+        with:
+          name: ${{ env.FILE }}
+          path: ${{ env.FILE }}
+          retention-days: 90
+          if-no-files-found: error
