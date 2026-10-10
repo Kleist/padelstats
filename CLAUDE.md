@@ -76,6 +76,15 @@ Web app (GitHub secrets, synced to Fly by the deploy workflow): `DATABASE_URL`, 
 - **CI checks:** Lint (ruff) → Tests (pytest) → Build, in both workflows
 - **Web app:** `.github/workflows/app.yml` — lint → tests on Postgres → `alembic check` on every PR; on `main` deploys to Fly.io (`padelstats-kleist`), and on same-repo PRs to the shared staging app `padelstats-kleist-staging` (separate DB via `STAGING_DATABASE_URL`); both smoke-test `/healthz/db` for the new commit SHA. Deploys are skipped (with a warning) until `FLY_API_TOKEN` (and for staging `STAGING_DATABASE_URL`) is set.
 
+## Commits & pull requests
+
+- Commit in small, logical, atomic chunks: one concern per commit, with a message saying what changed and why.
+- Order commits refactor first, then schema/migrations, then the feature, then its workflows/automation, then docs/plan status.
+- Each commit must pass `ruff check .` and `pytest` on its own. Check before pushing with `git rebase origin/main --exec 'poetry run ruff check . && poetry run pytest -q'`.
+- Docs that describe a piece of work (`CLAUDE.md`, `docs/SETUP.md`) go in the same commit as that work. Marking a phase in `docs/PLAN.md` as done gets its own commit at the end.
+- Keep a PR's history clean, also after the PR is open: fold fixes into the commit they belong to (amend/fixup, split, reorder, drop) and `git push --force-with-lease`. Don't add "fix previous commit" or revert-of-own-commit commits.
+- Never rewrite `main`. For stacked PRs, rebase the stacked branch onto its rewritten base and force-push it too.
+
 ## Key conventions
 
 - All HTML, CSS, and JS live in `templates/index.html` (Jinja2 template)
