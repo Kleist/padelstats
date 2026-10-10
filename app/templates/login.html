@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Log ind · Padel Stats{% endblock %}
+{% block content %}
+<h1>Log ind</h1>
+{% if error %}<div class="card errors">{{ error }}</div>{% endif %}
+<form method="post" action="/login" class="card">
+  <div class="field">
+    <label for="password">Kodeord</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+  </div>
+  <button class="btn btn-block" type="submit">Log ind</button>
+</form>
+<p><a href="/">Tilbage</a></p>
+{% endblock %}
