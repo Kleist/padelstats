@@ -6,7 +6,7 @@ from app.db import database_url, make_engine
 from app.models import Base
 
 if context.config.config_file_name is not None:
-    fileConfig(context.config.config_file_name)
+    fileConfig(context.config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

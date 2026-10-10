@@ -1,6 +1,7 @@
 """Padel stats web app: lets logged-in players enter match results from their phone."""
 
 import hmac
+import logging
 import os
 from datetime import date
 from pathlib import Path
@@ -19,6 +20,10 @@ VERSION = os.environ.get("GIT_SHA", "dev")
 VENUES = ["Inde", "Ude"]
 MAX_SETS = 6
 ONE_YEAR = 365 * 24 * 3600
+
+# Uvicorn only configures its own loggers; this makes ours show up in `fly logs` too.
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s: %(message)s")
+log = logging.getLogger("padelstats")
 
 app = FastAPI(title="Padel Stats", docs_url=None, redoc_url=None)
 app.add_middleware(
@@ -92,12 +97,29 @@ def login_form(request: Request):
     return templates.TemplateResponse(request, "login.html", {"error": None})
 
 
+def login_failure_reason(password: str, expected: str) -> str:
+    """Explain a failed login without logging the password itself."""
+    if not expected:
+        return "ADMIN_PASSWORD is not set on the server"
+    if not password:
+        return "empty password submitted"
+    if password.lower() == expected.lower():
+        return "wrong letter case (phone auto-capitalisation?)"
+    return f"wrong password ({len(password)} chars submitted, {len(expected)} expected)"
+
+
 @app.post("/login")
 def login(request: Request, password: str = Form("")):
-    expected = os.environ.get("ADMIN_PASSWORD", "")
+    # Strip surrounding whitespace on both sides: phone keyboards add trailing spaces,
+    # and secrets pasted into GitHub can carry a trailing newline.
+    expected = os.environ.get("ADMIN_PASSWORD", "").strip()
+    password = password.strip()
+    client = request.client.host if request.client else "?"
     if expected and hmac.compare_digest(password.encode(), expected.encode()):
         request.session["auth"] = True
+        log.info("Login OK from %s", client)
         return RedirectResponse("/ny", status_code=303)
+    log.warning("Login failed from %s: %s", client, login_failure_reason(password, expected))
     return templates.TemplateResponse(request, "login.html", {"error": "Forkert kodeord"}, status_code=401)
 
 
