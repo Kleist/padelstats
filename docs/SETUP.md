@@ -47,7 +47,9 @@ Every pull request can deploy to a separate staging app, <https://padelstats-kle
 2. Click **Connect** on the `staging` branch, turn **Connection pooling off**, and copy the connection string.
 3. Add it as a repository secret named `STAGING_DATABASE_URL`.
 
-Each push to a PR then runs tests and deploys the PR to staging. Migrations run against the staging database only. The PR page shows a **View deployment** button. Staging uses the same `ADMIN_PASSWORD` and has its own login cookie. There is only one staging app, so the most recently pushed PR is the one running there. To refresh the staging data from production, reset the `staging` branch from its parent in Neon.
+Each push to a PR then runs tests and deploys the PR to staging. Migrations run against the staging database only. The PR page shows a **View deployment** button. Staging uses the same `ADMIN_PASSWORD` and has its own login cookie. There is only one staging app, so the most recently pushed PR is the one running there.
+
+Every staging deploy wipes the staging database and restores the latest nightly production backup into it (see 7. Backups). Each PR therefore starts from fresh production data, its migrations are tested against real data, and every PR checks that the backups can actually be restored: if the restore fails, the staging deploy fails. Anything entered on staging is lost on the next deploy. Until the first backup has run, staging keeps its current data (with a warning).
 
 Without `STAGING_DATABASE_URL`, the staging deploy is skipped with a warning.
 
@@ -63,7 +65,7 @@ Target `staging` imports into the staging database instead (needs `STAGING_DATAB
 
 ## 7. Backups
 
-**Database backup** runs every night and stores a `pg_dump` of production as an artifact (kept 90 days): **Actions → Database backup → latest run → Artifacts**. Run it by hand once to check it works.
+**Database backup** runs every night and stores a `pg_dump` of production as an artifact (kept 90 days): **Actions → Database backup → latest run → Artifacts**. Run it by hand once to check it works. Every staging deploy restores the latest backup, so a broken backup shows up as a failed staging deploy.
 If the repository is public, any logged-in GitHub user can download these artifacts. They hold only player names and results, which are public anyway.
 
 To restore a backup (e.g. into a new Neon branch), unzip the artifact and run:

@@ -62,6 +62,9 @@ jobs:
     environment:
       name: ${{ github.event_name == 'pull_request' && 'staging' || 'production' }}
       url: https://${{ format(github.event_name == 'pull_request' && '{0}-staging' || '{0}', vars.FLY_APP || 'padelstats-kleist') }}.fly.dev
+    permissions:
+      contents: read
+      actions: read  # download the latest backup artifact for staging
     concurrency:
       group: fly-deploy-${{ github.event_name == 'pull_request' && 'staging' || 'production' }}
       cancel-in-progress: false
@@ -112,6 +115,35 @@ jobs:
               echo "SESSION_SECRET=$(openssl rand -hex 32)"
             fi
           } | flyctl secrets import --stage -a "$FLY_APP"
+
+      # Staging always starts from the latest nightly production backup. This tests that the backup
+      # restores, and runs the PR's migrations (release_command) against real data.
+      - name: Restore latest production backup into staging
+        if: steps.configured.outputs.ok == 'true' && env.TARGET == 'staging'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          run=$(gh run list -R "$GITHUB_REPOSITORY" --workflow backup.yml --branch main --status success \
+            --limit 1 --json databaseId,createdAt --jq '.[] | "\(.databaseId) \(.createdAt)"') \
+            || run=""  # backup.yml not on main yet
+          if [ -z "$run" ]; then
+            echo "::warning::No successful Database backup run yet — staging keeps its current data."
+            exit 0
+          fi
+          read -r run_id created <<< "$run"
+          gh run download "$run_id" -R "$GITHUB_REPOSITORY" --dir backup
+          dump=$(find backup -name '*.dump' | sort | tail -1)
+          if [ -z "$dump" ]; then echo "::error::Backup run $run_id has no .dump artifact"; exit 1; fi
+          echo "Restoring $dump (backup run $run_id, $created)"
+          # Same Postgres image as the backup workflow. Start from an empty schema so tables left over
+          # from an earlier PR's migrations don't survive the restore.
+          matches=$(docker run --rm -e STAGING_DATABASE_URL -v "$PWD/backup:/backup:ro" postgres:18 sh -euc "
+            psql -v ON_ERROR_STOP=1 -q -d \"\$STAGING_DATABASE_URL\" -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
+            pg_restore --no-owner --no-acl --exit-on-error -d \"\$STAGING_DATABASE_URL\" '/backup/${dump#backup/}'
+            psql -v ON_ERROR_STOP=1 -At -d \"\$STAGING_DATABASE_URL\" -c 'SELECT count(*) FROM matches'
+          ")
+          echo "::notice::Restored production backup from $created into staging: $matches matches"
 
       - name: Deploy
         if: steps.configured.outputs.ok == 'true'
