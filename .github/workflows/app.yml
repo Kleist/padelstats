@@ -51,21 +51,35 @@ jobs:
           poetry run alembic upgrade head
           poetry run alembic check
 
+  # main → production; pull requests from this repo → one shared staging app with its own database
+  # (the last PR pushed wins). Fork PRs get no secrets, so they are skipped.
   deploy:
     needs: test
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name != 'pull_request' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event_name == 'pull_request' && 'staging' || 'production' }}
+      url: https://${{ format(github.event_name == 'pull_request' && '{0}-staging' || '{0}', vars.FLY_APP || 'padelstats-kleist') }}.fly.dev
     concurrency:
-      group: fly-deploy
+      group: fly-deploy-${{ github.event_name == 'pull_request' && 'staging' || 'production' }}
       cancel-in-progress: false
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      TARGET: ${{ github.event_name == 'pull_request' && 'staging' || 'production' }}
+      FLY_APP: ${{ format(github.event_name == 'pull_request' && '{0}-staging' || '{0}', vars.FLY_APP || 'padelstats-kleist') }}
     steps:
       - name: Check that Fly.io is configured
         id: configured
+        env:
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
           if [ -z "$FLY_API_TOKEN" ]; then
             echo "::warning::FLY_API_TOKEN secret is not set — skipping deploy. See docs/SETUP.md."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          elif [ "$TARGET" = staging ] && [ -z "$STAGING_DATABASE_URL" ]; then
+            echo "::warning::STAGING_DATABASE_URL secret is not set — skipping staging deploy. See docs/SETUP.md."
             echo "ok=false" >> "$GITHUB_OUTPUT"
           else
             echo "ok=true" >> "$GITHUB_OUTPUT"
@@ -84,7 +98,7 @@ jobs:
       - name: Sync secrets
         if: steps.configured.outputs.ok == 'true'
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ github.event_name == 'pull_request' && secrets.STAGING_DATABASE_URL || secrets.DATABASE_URL }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         run: |
           for name in DATABASE_URL ADMIN_PASSWORD; do

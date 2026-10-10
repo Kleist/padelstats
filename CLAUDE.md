@@ -62,14 +62,14 @@ Stored in `.env` (gitignored). Required for the static build:
 - `GOOGLE_SHEETS_API_KEY` — Google Sheets API key
 - `SPREADSHEET_ID` — ID of the spreadsheet with match data
 
-Web app (GitHub secrets, synced to Fly by the deploy workflow): `DATABASE_URL`, `ADMIN_PASSWORD`, `FLY_API_TOKEN`. `SESSION_SECRET` is generated on Fly on first deploy.
+Web app (GitHub secrets, synced to Fly by the deploy workflow): `DATABASE_URL`, `ADMIN_PASSWORD`, `FLY_API_TOKEN`, optionally `STAGING_DATABASE_URL`. `SESSION_SECRET` is generated on Fly on first deploy.
 
 ## Deployment
 
 - **Production:** GitHub Actions deploys to GitHub Pages on push to `main` and daily at 06:00 UTC (`.github/workflows/deploy.yml`)
 - **PR preview:** Builds on pull requests and uploads artifact (`.github/workflows/preview.yml`)
 - **CI checks:** Lint (ruff) → Tests (pytest) → Build, in both workflows
-- **Web app:** `.github/workflows/app.yml` — lint → tests on Postgres → `alembic check` on every PR; on `main` also deploys to Fly.io and smoke-tests `/healthz/db` for the new commit SHA. Deploy is skipped (with a warning) until `FLY_API_TOKEN` is set.
+- **Web app:** `.github/workflows/app.yml` — lint → tests on Postgres → `alembic check` on every PR; on `main` deploys to Fly.io (`padelstats-kleist`), and on same-repo PRs to the shared staging app `padelstats-kleist-staging` (separate DB via `STAGING_DATABASE_URL`); both smoke-test `/healthz/db` for the new commit SHA. Deploys are skipped (with a warning) until `FLY_API_TOKEN` (and for staging `STAGING_DATABASE_URL`) is set.
 
 ## Key conventions
 
