@@ -21,6 +21,7 @@ A web app (`app/`) backed by Postgres is being built to replace the Sheet: playe
 - Schema changes: edit `app/models.py` **and** add a migration in `migrations/versions/` (CI runs `alembic check` to catch drift)
 - Login: shared `ADMIN_PASSWORD` → signed session cookie (`SESSION_SECRET`); `COOKIE_SECURE=0` for plain-http local runs
 - Hosting: Fly.io (`fly.toml`, `Dockerfile`); migrations run as Fly `release_command`
+- Sheet import: `app/sheet_import.py` + `scripts/import_sheet.py` (idempotent via `matches.sheet_row`)
 
 ## Build & run
 
@@ -51,6 +52,9 @@ python tests/update_golden.py
 # Run the web app locally
 COOKIE_SECURE=0 ADMIN_PASSWORD=test poetry run alembic upgrade head
 COOKIE_SECURE=0 ADMIN_PASSWORD=test poetry run uvicorn app.main:app --reload
+
+# Import the Google Sheet into DATABASE_URL (needs the .env sheet variables); --dry-run writes nothing
+poetry run python scripts/import_sheet.py --dry-run
 
 # New migration after changing app/models.py
 poetry run alembic revision --autogenerate -m "describe change"
