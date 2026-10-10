@@ -28,6 +28,8 @@ class Match(Base):
     b1_id: Mapped[int] = mapped_column(ForeignKey("players.id"))
     b2_id: Mapped[int] = mapped_column(ForeignKey("players.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Row number in the Google Sheet for imported matches (None for matches entered in the app).
+    sheet_row: Mapped[int | None] = mapped_column(Integer, unique=True, index=True)
 
     a1: Mapped[Player] = relationship(foreign_keys=[a1_id], lazy="joined")
     a2: Mapped[Player] = relationship(foreign_keys=[a2_id], lazy="joined")
