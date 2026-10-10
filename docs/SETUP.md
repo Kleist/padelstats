@@ -45,3 +45,19 @@ Tip: in the browser menu, choose **Add to Home Screen**.
 - **First page load takes a few seconds** — the machine and the database both sleep when idle and wake on the first request. That's what keeps it cheap.
 - **Changing the password** — update `ADMIN_PASSWORD` in GitHub secrets and re-run the workflow.
 - Ask Claude Code: *"the deploy failed, look at the latest Web app workflow run and fix it"*.
+
+## Troubleshooting: login fails
+
+Watch the app's logs while you try to log in:
+
+```bash
+fly logs -a padelstats-kleist
+```
+
+(or Fly dashboard → your app → **Logs & Errors**). Each failed login logs a reason, never the password itself:
+
+- `ADMIN_PASSWORD is not set on the server`: the GitHub secret is missing or the deploy that syncs it hasn't run. Check with `fly secrets list -a padelstats-kleist`.
+- `wrong letter case`: the phone capitalised the first letter.
+- `wrong password (N chars submitted, M expected)`: a different password than the `ADMIN_PASSWORD` GitHub secret. Different lengths usually mean a typo or a stale secret; re-set the secret and re-run the **Web app** workflow.
+
+Whitespace around the password (a phone's trailing space, a trailing newline in the secret) is ignored.

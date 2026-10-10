@@ -39,6 +39,25 @@ def test_wrong_password(client):
     assert client.get("/ny", follow_redirects=False).status_code == 303
 
 
+def test_login_ignores_surrounding_whitespace(client):
+    resp = client.post("/login", data={"password": " hemmelig "}, follow_redirects=False)
+    assert resp.headers["location"] == "/ny"
+
+
+def test_failed_login_is_logged_without_password(client, caplog):
+    client.post("/login", data={"password": "Hemmelig"})
+    client.post("/login", data={"password": "forkert"})
+    assert "wrong letter case" in caplog.text
+    assert "7 chars submitted, 8 expected" in caplog.text
+    assert "forkert" not in caplog.text
+
+
+def test_login_logs_missing_admin_password(client, caplog, monkeypatch):
+    monkeypatch.delenv("ADMIN_PASSWORD")
+    assert client.post("/login", data={"password": "hemmelig"}).status_code == 401
+    assert "ADMIN_PASSWORD is not set" in caplog.text
+
+
 def test_create_match(logged_in):
     resp = logged_in.post("/ny", data=MATCH, follow_redirects=False)
     assert resp.status_code == 303
