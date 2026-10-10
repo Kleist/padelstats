@@ -49,7 +49,7 @@ Every pull request can deploy to a separate staging app, <https://padelstats-kle
 
 Each push to a PR then runs tests and deploys the PR to staging. Migrations run against the staging database only. The PR page shows a **View deployment** button. Staging uses the same `ADMIN_PASSWORD` and has its own login cookie. There is only one staging app, so the most recently pushed PR is the one running there.
 
-Every staging deploy wipes the staging database and restores the latest nightly production backup into it (see 7. Backups). Each PR therefore starts from fresh production data, its migrations are tested against real data, and every PR checks that the backups can actually be restored: if the restore fails, the staging deploy fails. Anything entered on staging is lost on the next deploy. Until the first backup has run, staging keeps its current data (with a warning).
+Every staging deploy wipes the staging database and restores the latest nightly production backup into it (see 7. Backups). Each PR therefore starts from fresh production data, its migrations are tested against real data, and every PR checks that the backups can actually be restored: if the restore fails, the staging deploy fails. Anything entered on staging is lost on the next deploy. Until a backup exists, the staging deploy fails: run **Actions → Database backup** once, then re-run the failed job.
 
 Without `STAGING_DATABASE_URL`, the staging deploy is skipped with a warning.
 
