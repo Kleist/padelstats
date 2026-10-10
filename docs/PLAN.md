@@ -60,11 +60,15 @@ Proves the whole pipeline: phone → web app → database → automatic deploys.
 
 **Done when:** after the [setup](SETUP.md), you can open `https://padelstats-kleist.fly.dev` on your phone, enter a match, and see it in the list; and merging a trivial PR changes the version shown in the footer.
 
-### Phase 1 — Move the data
+### Phase 1 — Move the data ✅ built, run the import once
 
-- Import script: Google Sheet → database (idempotent, so it can be re-run until cut-over).
-- Verification test: stats computed from the database equal stats computed from the Sheet.
-- Nightly backup: GitHub Action runs `pg_dump` and stores it as an artifact (Neon's free restore window is short).
+- Import script (`scripts/import_sheet.py`, workflow **Import from Google Sheet**): Google Sheet → database. It's idempotent: each match remembers its sheet row (`matches.sheet_row`), so re-running updates edited rows, adds new ones and removes deleted ones. Matches entered in the app are never touched.
+- Verification: after every import the script recomputes leaderboard, Elo and pairs from the database and compares them with the Sheet; the run fails on any difference. Rows that can't be stored (bad date, score > 7, same player twice) are skipped and listed.
+- Nightly backup (workflow **Database backup**): `pg_dump` at 02:30 UTC, kept as an artifact for 90 days.
+
+**Done when:** the import workflow reports "Verification OK" against production, and the first nightly backup artifact exists.
+
+Until cut-over, don't enter the same match in both the Sheet and the app — it would be counted twice.
 
 ### Phase 2 — Stats in the app
 
