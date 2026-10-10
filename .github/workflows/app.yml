@@ -128,8 +128,8 @@ jobs:
             --limit 1 --json databaseId,createdAt --jq '.[] | "\(.databaseId) \(.createdAt)"') \
             || run=""  # backup.yml not on main yet
           if [ -z "$run" ]; then
-            echo "::warning::No successful Database backup run yet — staging keeps its current data."
-            exit 0
+            echo "::error::No successful Database backup run on main yet. Run Actions → Database backup, then re-run this job."
+            exit 1
           fi
           read -r run_id created <<< "$run"
           gh run download "$run_id" -R "$GITHUB_REPOSITORY" --dir backup
