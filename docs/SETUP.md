@@ -51,6 +51,16 @@ Each push to a PR then runs tests and deploys the PR to staging. Migrations run 
 
 Without `STAGING_DATABASE_URL`, the staging deploy is skipped with a warning.
 
+## 6. Import the matches from the Google Sheet
+
+Uses the `GOOGLE_SHEETS_API_KEY` and `SPREADSHEET_ID` secrets the GitHub Pages site already uses.
+
+1. Go to **Actions → Import from Google Sheet → Run workflow** (branch `main`, target `production`).
+2. Keep **Only show what would change** ticked the first time. The run summary lists new/updated rows, skipped rows with the reason (fix them in the Sheet), and whether the stats match.
+3. Run it again with the box unticked to save. Re-run it any time until cut-over to pick up new Sheet rows.
+
+Target `staging` imports into the staging database instead (needs `STAGING_DATABASE_URL`).
+
 ## Troubleshooting
 
 - **Deploy job says "FLY_API_TOKEN secret is not set"** — step 3 is missing; the tests still ran.
