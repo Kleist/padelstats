@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<header>
+  <h1>Padel Stats</h1>
+  {% if logged_in %}
+  <form method="post" action="/logout"><button class="btn-link" type="submit">Log ud</button></form>
+  {% endif %}
+</header>
+
+{% if saved %}<div class="card notice">Kampen er gemt ✓</div>{% endif %}
+
+<p style="margin-bottom:1rem"><a class="btn btn-block" href="/ny">+ Indtast kamp</a></p>
+
+<div class="card">
+  <h2 style="font-size:1.1rem;margin-bottom:0.5rem">Seneste kampe</h2>
+  {% for row in rows %}
+  {% set m = row.match %}
+  <div class="match">
+    <div>
+      <div class="{{ 'win' if row.winner == 'A' }}">{{ m.a1.name }} &amp; {{ m.a2.name }}</div>
+      <div class="{{ 'win' if row.winner == 'B' }}">{{ m.b1.name }} &amp; {{ m.b2.name }}</div>
+      <div class="meta">{{ m.played_on.strftime('%d/%m/%Y') }} · {{ m.venue }}</div>
+    </div>
+    <div class="score">{% for s in m.sets %}{{ s.games_a }}-{{ s.games_b }}{{ " " if not loop.last }}{% endfor %}</div>
+  </div>
+  {% else %}
+  <p class="meta">Ingen kampe endnu.</p>
+  {% endfor %}
+</div>
+{% endblock %}

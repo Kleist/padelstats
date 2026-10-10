@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Ny kamp · Padel Stats{% endblock %}
+{% block content %}
+<h1>Ny kamp</h1>
+{% if errors %}
+<div class="card errors">{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div>
+{% endif %}
+<form method="post" action="/ny">
+  <div class="card">
+    <div class="row">
+      <div>
+        <label for="played_on">Dato</label>
+        <input id="played_on" name="played_on" type="date" value="{{ values.played_on }}" required>
+      </div>
+      <div>
+        <label for="venue">Sted</label>
+        <select id="venue" name="venue">
+          {% for v in venues %}<option{{ " selected" if values.venue == v }}>{{ v }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <datalist id="players">{% for p in players %}<option value="{{ p }}">{% endfor %}</datalist>
+
+  {% for team, label in [("a", "Hold A"), ("b", "Hold B")] %}
+  <div class="card">
+    <label>{{ label }}</label>
+    <div class="row" style="margin-bottom:0">
+      {% for n in (1, 2) %}
+      <input name="{{ team }}{{ n }}" list="players" placeholder="Spiller {{ n }}" autocomplete="off"
+             autocapitalize="words" value="{{ values[team ~ n] or '' }}" aria-label="{{ label }} spiller {{ n }}">
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="card">
+    <div class="row" style="margin-bottom:0.25rem"><label>Hold A</label><label>Hold B</label></div>
+    {% for i in range(1, max_sets + 1) %}
+    <div class="row">
+      {% for side in ("a", "b") %}
+      <input name="s{{ i }}{{ side }}" type="number" inputmode="numeric" min="0" max="7"
+             placeholder="Sæt {{ i }}" value="{{ values['s' ~ i ~ side] or '' }}" aria-label="Sæt {{ i }} hold {{ side|upper }}">
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <button class="btn btn-block" type="submit">Gem kamp</button>
+</form>
+<p style="margin-top:1rem"><a href="/">Annuller</a></p>
+{% endblock %}

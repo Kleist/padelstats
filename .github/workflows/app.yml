@@ -1,0 +1,120 @@
+name: Web app
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  FLY_APP: ${{ vars.FLY_APP || 'padelstats-kleist' }}
+  FLY_ORG: ${{ vars.FLY_ORG || 'personal' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: padel
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-root --extras dev
+
+      - name: Lint
+        run: poetry run ruff check .
+
+      - name: Test (against Postgres)
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/padel
+        run: poetry run pytest
+
+      - name: Check migrations match models
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/padel
+        run: |
+          poetry run alembic upgrade head
+          poetry run alembic check
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: fly-deploy
+      cancel-in-progress: false
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - name: Check that Fly.io is configured
+        id: configured
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::warning::FLY_API_TOKEN secret is not set — skipping deploy. See docs/SETUP.md."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.configured.outputs.ok == 'true'
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: steps.configured.outputs.ok == 'true'
+
+      - name: Create Fly app if it does not exist
+        if: steps.configured.outputs.ok == 'true'
+        run: flyctl status -a "$FLY_APP" >/dev/null 2>&1 || flyctl apps create "$FLY_APP" --org "$FLY_ORG"
+
+      - name: Sync secrets
+        if: steps.configured.outputs.ok == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          for name in DATABASE_URL ADMIN_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::Secret $name is not set. See docs/SETUP.md."; exit 1; fi
+          done
+          {
+            echo "DATABASE_URL=$DATABASE_URL"
+            echo "ADMIN_PASSWORD=$ADMIN_PASSWORD"
+            # Generated once and kept, so logins survive deploys.
+            if ! flyctl secrets list -a "$FLY_APP" | grep -q SESSION_SECRET; then
+              echo "SESSION_SECRET=$(openssl rand -hex 32)"
+            fi
+          } | flyctl secrets import --stage -a "$FLY_APP"
+
+      - name: Deploy
+        if: steps.configured.outputs.ok == 'true'
+        run: flyctl deploy --remote-only --ha=false -a "$FLY_APP" --build-arg GIT_SHA="$GITHUB_SHA"
+
+      - name: Smoke test
+        if: steps.configured.outputs.ok == 'true'
+        run: |
+          url="https://$FLY_APP.fly.dev/healthz/db"
+          for i in $(seq 1 10); do
+            body=$(curl -fsS "$url" || true)
+            echo "$body"
+            if echo "$body" | grep -q "\"version\":\"$GITHUB_SHA\""; then
+              echo "::notice::Deployed $GITHUB_SHA to https://$FLY_APP.fly.dev"
+              exit 0
+            fi
+            sleep 6
+          done
+          echo "::error::$url did not report version $GITHUB_SHA"
+          exit 1
