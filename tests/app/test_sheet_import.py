@@ -6,8 +6,9 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.matches import db_matches
 from app.models import Match, Player
-from app.sheet_import import db_matches, import_rows, verify
+from app.sheet_import import import_rows, verify
 from padel.stats import build_venue_data, parse_matches
 from tests.conftest import SAMPLE_ROWS
 

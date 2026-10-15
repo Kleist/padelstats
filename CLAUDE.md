@@ -23,6 +23,7 @@ A web app (`app/`) backed by Postgres is being built to replace the Sheet: playe
 - Schema changes: edit `app/models.py` **and** add a migration in `migrations/versions/` (CI runs `alembic check` to catch drift)
 - Login: shared `ADMIN_PASSWORD` → signed session cookie (`SESSION_SECRET`); `COOKIE_SECURE=0` for plain-http local runs
 - Hosting: Fly.io (`fly.toml`, `Dockerfile`); migrations run as Fly `release_command`
+- `app/matches.py` — `db_matches()`: database matches as match dicts for `padel.stats` (sheet order first, then app-entered by date)
 - Sheet import: `app/sheet_import.py` + `scripts/import_sheet.py` (idempotent via `matches.sheet_row`, verifies stats DB == Sheet); run via the manual **Import from Google Sheet** workflow (`.github/workflows/import.yml`)
 - Backups: nightly `pg_dump` artifact (`.github/workflows/backup.yml`)
 
