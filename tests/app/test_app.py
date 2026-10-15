@@ -1,7 +1,5 @@
 """Tests for the match-entry web app."""
 
-from app.main import match_winner
-
 MATCH = {
     "played_on": "2026-10-09", "venue": "Ude",
     "a1": "Anders", "a2": "Bo", "b1": "Carsten", "b2": "Dennis",
@@ -20,10 +18,18 @@ def test_healthz_db(client):
     assert resp.json() == {"status": "ok", "version": "dev", "matches": 0}
 
 
-def test_index_empty(client):
+def text(resp):
+    """Response body with whitespace collapsed (the stats template spreads set scores over lines)."""
+    return " ".join(resp.text.split())
+
+
+def test_index_is_the_stats_page(client):
     resp = client.get("/")
     assert resp.status_code == 200
-    assert "Ingen kampe endnu" in resp.text
+    assert "0 kampe spillet" in resp.text
+    assert "Leaderboard" in resp.text
+    assert 'href="/ny"' in resp.text
+    assert "Log ud" not in resp.text
 
 
 def test_new_match_requires_login(client):
@@ -63,19 +69,30 @@ def test_create_match(logged_in):
     assert resp.status_code == 303
     assert resp.headers["location"].startswith("/?gemt=")
 
-    page = logged_in.get(resp.headers["location"]).text
+    page = text(logged_in.get(resp.headers["location"]))
     assert "Kampen er gemt" in page
+    assert "Log ud" in page
+    assert "1 kampe spillet" in page
     assert "Anders &amp; Bo" in page
-    assert "6-3 4-6 7-5" in page
-    assert "09/10/2026 · Ude" in page
+    assert "6-3, 4-6, 7-5" in page
+    assert '<td data-sort="2026-10-09">09/10/2026</td> <td>Ude</td>' in page
     assert logged_in.get("/healthz/db").json()["matches"] == 1
+
+
+def test_stats_include_entered_matches(logged_in):
+    logged_in.post("/ny", data=MATCH)
+    logged_in.post("/ny", data={**MATCH, "played_on": "2026-10-10", "s3a": "2", "s3b": "6"})
+    page = text(logged_in.get("/"))
+    assert "2 kampe spillet" in page
+    assert "Carsten &amp; Dennis" in page
+    assert '"Anders": [{"date": "09/10/2026"' in page  # Elo history for the chart
 
 
 def test_six_sets(logged_in):
     six = {f"s{i}{side}": v for i in range(1, 7) for side, v in (("a", "6"), ("b", "4"))}
     assert 'name="s6a"' in logged_in.get("/ny").text
     resp = logged_in.post("/ny", data={**MATCH, **six})
-    assert "6-4 6-4 6-4 6-4 6-4 6-4" in logged_in.get(resp.url).text
+    assert "6-4, 6-4, 6-4, 6-4, 6-4, 6-4" in text(logged_in.get(resp.url))
 
 
 def test_players_are_reused_case_insensitively(logged_in):
@@ -120,10 +137,3 @@ def test_requires_a_set(logged_in):
 def test_logout(logged_in):
     logged_in.post("/logout")
     assert logged_in.get("/ny", follow_redirects=False).status_code == 303
-
-
-def test_match_winner():
-    assert match_winner([(6, 3), (6, 4)]) == "A"
-    assert match_winner([(6, 3), (3, 6), (5, 7)]) == "B"
-    assert match_winner([(6, 3), (3, 6)]) == "draw"
-    assert match_winner([(6, 4), (4, 6), (4, 3)]) == "draw"

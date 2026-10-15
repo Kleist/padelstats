@@ -10,12 +10,15 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.db import get_session
+from app.matches import db_matches
 from app.models import Match, MatchSet, Player
+from padel.render import render_html
 
 VERSION = os.environ.get("GIT_SHA", "dev")
 VENUES = ["Inde", "Ude"]
@@ -39,21 +42,6 @@ app.add_middleware(
 )
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 templates.env.globals["version"] = VERSION
-
-
-def is_set_won(winner_score, loser_score):
-    return winner_score == 7 or (winner_score == 6 and loser_score <= 4)
-
-
-def match_winner(sets):
-    """Return "A", "B" or "draw" from a list of (games_a, games_b) tuples. Same rules as build.py."""
-    won_a = sum(1 for a, b in sets if is_set_won(a, b))
-    won_b = sum(1 for a, b in sets if is_set_won(b, a))
-    if won_a > won_b:
-        return "A"
-    if won_b > won_a:
-        return "B"
-    return "draw"
 
 
 def is_logged_in(request: Request):
@@ -84,16 +72,11 @@ def healthz_db(session: Session = Depends(get_session)):
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request, session: Session = Depends(get_session)):
-    matches = session.scalars(select(Match).order_by(Match.played_on.desc(), Match.id.desc()).limit(50)).unique()
-    rows = [
-        {"match": m, "winner": match_winner([(s.games_a, s.games_b) for s in m.sets])}
-        for m in matches
-    ]
-    return templates.TemplateResponse(
-        request,
-        "index.html",
-        {"rows": rows, "logged_in": is_logged_in(request), "saved": request.query_params.get("gemt")},
+    """Landing page: the stats page, computed live from the database, with the app's bar on top."""
+    app_bar = templates.get_template("app_bar.html").render(
+        logged_in=is_logged_in(request), saved=request.query_params.get("gemt")
     )
+    return HTMLResponse(render_html(db_matches(session), app_bar=Markup(app_bar)))
 
 
 @app.get("/login", response_class=HTMLResponse)

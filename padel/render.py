@@ -13,7 +13,8 @@ _env = Environment(loader=FileSystemLoader(_template_dir), autoescape=True)
 TEMPLATE = _env.get_template("index.html")
 
 
-def render_html(matches, default_venue="begge"):
+def render_html(matches, default_venue="begge", app_bar=None):
+    """Render the stats page. app_bar: optional Markup the web app puts at the top (login, + Indtast kamp)."""
     venue_data = build_venue_data(matches)
     venue_json = {
         v: {
@@ -30,4 +31,5 @@ def render_html(matches, default_venue="begge"):
         venue_data=venue_data,
         # JSON for a <script> block: <, >, & and ' are \u-escaped. Key order kept (no sort_keys).
         venue_data_json=htmlsafe_json_dumps(venue_json),
+        app_bar=app_bar,
     )
