@@ -1,6 +1,6 @@
 """Tests for compute_elo()."""
 
-from build import compute_elo
+from padel.stats import compute_elo
 
 
 def _match(team_a, team_b, winner, date="01/01/2026"):

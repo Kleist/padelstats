@@ -8,7 +8,9 @@ A web app (`app/`) backed by Postgres is being built to replace the Sheet: playe
 
 ## Architecture
 
-- `build.py` — Python logic: data fetching, parsing, statistics computation, and HTML generation
+- `build.py` — static site build: fetches the Google Sheet and writes `dist/index.html`
+- `padel/stats.py` — parsing and statistics (leaderboard, Elo, pairs), shared by `build.py` and the web app
+- `padel/render.py` — renders `templates/index.html` from match dicts (`render_html()`)
 - `templates/index.html` — Jinja2 template with inline CSS and vanilla JavaScript
 - Output: `dist/index.html` — single self-contained HTML file (no external dependencies)
 

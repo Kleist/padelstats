@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.main import get_or_create_player
 from app.models import Match, MatchSet
-from build import build_venue_data, parse_row
+from padel.stats import build_venue_data, parse_row
 
 HEADER_ROWS = 2  # same as parse_matches
 
@@ -126,7 +126,7 @@ def db_rows(session: Session, imported_only=False):
 
 
 def db_matches(session: Session, imported_only=False):
-    """Match dicts (as from build.parse_matches) computed from the database."""
+    """Match dicts (as from padel.stats.parse_matches) computed from the database."""
     return [parse_row(row) for row in db_rows(session, imported_only)]
 
 

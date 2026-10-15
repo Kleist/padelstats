@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from build import render_html
+from padel.render import render_html
 
 GOLDEN_FILE = Path(__file__).parent / "expected" / "index.html"
 

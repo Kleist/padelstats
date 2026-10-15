@@ -1,6 +1,6 @@
 """Tests for filter_by_venue()."""
 
-from build import filter_by_venue
+from padel.stats import filter_by_venue
 
 
 def _m(sted, name="X"):

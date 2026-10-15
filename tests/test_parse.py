@@ -1,6 +1,6 @@
 """Tests for parse_matches()."""
 
-from build import parse_matches
+from padel.stats import parse_matches
 
 
 def test_empty_rows():
