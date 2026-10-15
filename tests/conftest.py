@@ -37,5 +37,5 @@ def sample_rows():
 @pytest.fixture
 def sample_matches():
     """Parsed match dicts from sample rows."""
-    from build import parse_matches
+    from padel.stats import parse_matches
     return parse_matches(SAMPLE_ROWS)

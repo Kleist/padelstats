@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Match, Player
 from app.sheet_import import db_matches, import_rows, verify
-from build import build_venue_data, parse_matches
+from padel.stats import build_venue_data, parse_matches
 from tests.conftest import SAMPLE_ROWS
 
 

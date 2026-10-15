@@ -10,6 +10,8 @@ RUN poetry install --no-root --only main
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY app ./app
+COPY padel ./padel
+COPY templates ./templates
 
 ARG GIT_SHA=dev
 ENV GIT_SHA=$GIT_SHA

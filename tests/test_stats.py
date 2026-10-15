@@ -1,6 +1,6 @@
 """Tests for compute_player_stats()."""
 
-from build import compute_player_stats
+from padel.stats import compute_player_stats
 
 
 def _match(team_a, team_b, sets, winner):

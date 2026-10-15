@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from build import parse_matches
+from padel.stats import parse_matches
 from tests.conftest import SAMPLE_ROWS
 from tests.test_acceptance import render_site
 
