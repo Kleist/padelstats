@@ -22,6 +22,7 @@ A web app (`app/`) backed by Postgres is being built to replace the Sheet: playe
 - Database: Postgres (Neon) in production via `DATABASE_URL`; defaults to SQLite `padelstats.db` locally
 - Schema changes: edit `app/models.py` **and** add a migration in `migrations/versions/` (CI runs `alembic check` to catch drift)
 - Login: shared `ADMIN_PASSWORD` → signed session cookie (`SESSION_SECRET`); `COOKIE_SECURE=0` for plain-http local runs
+- Player names on the match form are restricted to safe characters (`PLAYER_NAME` in `app/main.py`): the stats page's JavaScript builds HTML from them
 - Hosting: Fly.io (`fly.toml`, `Dockerfile`); migrations run as Fly `release_command`
 - `app/matches.py` — `db_matches()`: database matches as match dicts for `padel.stats` (sheet order first, then app-entered by date)
 - Sheet import: `app/sheet_import.py` + `scripts/import_sheet.py` (idempotent via `matches.sheet_row`, verifies stats DB == Sheet); run via the manual **Import from Google Sheet** workflow (`.github/workflows/import.yml`)
