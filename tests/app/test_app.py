@@ -101,6 +101,15 @@ def test_validation_errors(logged_in):
     assert logged_in.get("/healthz/db").json()["matches"] == 0
 
 
+def test_player_names_are_restricted(logged_in):
+    for name in ("<script>", "Bo\"", "a&b", "_x", "x" * 51):
+        resp = logged_in.post("/ny", data={**MATCH, "a2": name})
+        assert resp.status_code == 422, name
+        assert "Spillernavne må kun" in resp.text
+    resp = logged_in.post("/ny", data={**MATCH, "a2": "Søren B. O'Ærø-Hansen 2"}, follow_redirects=False)
+    assert resp.status_code == 303
+
+
 def test_requires_a_set(logged_in):
     data = {k: v for k, v in MATCH.items() if not k.startswith("s")}
     resp = logged_in.post("/ny", data=data)

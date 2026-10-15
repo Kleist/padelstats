@@ -3,6 +3,7 @@
 import hmac
 import logging
 import os
+import re
 from datetime import date
 from pathlib import Path
 
@@ -20,6 +21,9 @@ VERSION = os.environ.get("GIT_SHA", "dev")
 VENUES = ["Inde", "Ude"]
 MAX_SETS = 6
 ONE_YEAR = 365 * 24 * 3600
+# Letters (incl. æøå), digits, spaces, hyphens, periods and apostrophes. Names end up in the stats page's
+# JavaScript, which builds HTML from them, so markup characters must never get in.
+PLAYER_NAME = re.compile(r"[^\W_][\w .'-]{0,49}")
 
 # Uvicorn only configures its own loggers; this makes ours show up in `fly logs` too.
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s: %(message)s")
@@ -165,6 +169,8 @@ async def create_match(request: Request, session: Session = Depends(get_session)
         errors.append("Udfyld alle fire spillere")
     elif len({n.lower() for n in names}) < 4:
         errors.append("Samme spiller må kun optræde én gang")
+    if any(n and not PLAYER_NAME.fullmatch(n) for n in names):
+        errors.append("Spillernavne må kun indeholde bogstaver, tal, mellemrum, punktum, apostrof og bindestreg")
 
     sets = []
     for i in range(1, MAX_SETS + 1):
