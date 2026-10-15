@@ -60,21 +60,24 @@ Proves the whole pipeline: phone → web app → database → automatic deploys.
 
 **Done when:** after the [setup](SETUP.md), you can open `https://padelstats-kleist.fly.dev` on your phone, enter a match, and see it in the list; and merging a trivial PR changes the version shown in the footer.
 
-### Phase 1 — Move the data ✅ built, run the import once
+### Phase 1 — Move the data ✅ done
 
 - Import script (`scripts/import_sheet.py`, workflow **Import from Google Sheet**): Google Sheet → database. It's idempotent: each match remembers its sheet row (`matches.sheet_row`), so re-running updates edited rows, adds new ones and removes deleted ones. Matches entered in the app are never touched.
 - Verification: after every import the script recomputes leaderboard, Elo and pairs from the database and compares them with the Sheet; the run fails on any difference. Rows that can't be stored (bad date, score > 7, same player twice) are skipped and listed.
 - Nightly backup (workflow **Database backup**): `pg_dump` at 02:30 UTC, kept as an artifact for 90 days.
 
-**Done when:** the import workflow reports "Verification OK" against production, and the first nightly backup artifact exists.
+Done: the first production import (Oct 10) stored 31 matches with "Verification OK", and nightly backups run.
 
 Until cut-over, don't enter the same match in both the Sheet and the app — it would be counted twice.
 
-### Phase 2 — Stats in the app
+### Phase 2 — Stats in the app ✅ built
 
-- Move `parse/compute_*` from `build.py` into a shared module used by both the static build and the app.
-- Render leaderboard, Elo (with chart), pairs and match history in the app, live from the database — same look as today.
-- Keep the golden-file acceptance test.
+- Parsing, stats and rendering live in the shared `padel/` package, used by both the static build (`build.py`) and the app.
+- The app's landing page `/` is the stats page (leaderboard, Elo with chart, pairs, match history), live from the database, with "+ Indtast kamp" on top — same look as the static site.
+- The golden-file acceptance test still guards the static site's output.
+- The stats page escapes HTML, and the app only accepts player names made of letters, digits, spaces, `.`, `'` and `-`.
+
+**Done when:** after merging, the app's front page shows the same numbers as the static site (as long as no matches are entered only in the app).
 
 ### Phase 3 — Cut over
 
