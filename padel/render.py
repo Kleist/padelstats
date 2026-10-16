@@ -13,8 +13,12 @@ _env = Environment(loader=FileSystemLoader(_template_dir), autoescape=True)
 TEMPLATE = _env.get_template("index.html")
 
 
-def render_html(matches, app_bar=None):
-    """Render the stats page. app_bar: optional Markup the web app puts at the top (login, + Indtast kamp)."""
+def render_html(matches, app_bar=None, filter_bar=None):
+    """Render the stats page.
+
+    app_bar / filter_bar: optional Markup from the web app, shown above the title (login, + Indtast kamp)
+    and below it (filters). The static site passes neither.
+    """
     stats = build_stats(matches)
     stats_json = {"elo": stats["elo_dict"], "pairCounts": stats["pair_counts"], "eloHistory": stats["elo_history"]}
     return TEMPLATE.render(
@@ -23,4 +27,5 @@ def render_html(matches, app_bar=None):
         # JSON for a <script> block: <, >, & and ' are \u-escaped. Key order kept (no sort_keys).
         stats_json=htmlsafe_json_dumps(stats_json),
         app_bar=app_bar,
+        filter_bar=filter_bar,
     )

@@ -19,6 +19,7 @@ from app.db import get_session
 from app.matches import db_matches
 from app.models import Match, MatchSet, Player
 from padel.render import render_html
+from padel.stats import filter_matches
 
 VERSION = os.environ.get("GIT_SHA", "dev")
 VENUES = ["Inde", "Ude"]
@@ -76,13 +77,48 @@ def healthz_db(session: Session = Depends(get_session)):
     return {"status": "ok", "version": VERSION, "matches": matches}
 
 
+MONTH_NAMES = ["januar", "februar", "marts", "april", "maj", "juni",
+               "juli", "august", "september", "oktober", "november", "december"]
+
+
+def month_label(year_month: str) -> str:
+    """ "2026-01" → "januar 26" """
+    return f"{MONTH_NAMES[int(year_month[5:7]) - 1]} {year_month[2:4]}"
+
+
+def danish_sort_key(name: str) -> str:
+    """Alphabetical in Danish order: æ, ø, å come after z."""
+    return name.casefold().translate(str.maketrans("æøå", "{|}"))  # the three characters after "z" in ASCII
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request, session: Session = Depends(get_session)):
-    """Landing page: the stats page, computed live from the database, with the app's bar on top."""
-    app_bar = templates.get_template("app_bar.html").render(
-        logged_in=is_logged_in(request), saved=request.query_params.get("gemt")
+    """Landing page: the stats page, computed live from the database, with the app's bar on top.
+
+    Filters come from the URL (?maaned=2026-01&maaned=2026-02&sted=Inde&spiller=Bo&spiller=Anders), so a
+    filtered view is a link. Several months or venues mean any of them; several players mean all of them.
+    Unknown values are ignored.
+    """
+    all_matches = db_matches(session)
+    months = sorted({m["date_sortable"][:7] for m in all_matches})  # e.g. ["2025-11", "2026-01"]
+    players = sorted({p for m in all_matches for p in m["team_a"] + m["team_b"]}, key=danish_sort_key)
+    params = request.query_params
+    chosen_months = [m for m in months if m in params.getlist("maaned")]
+    chosen_venues = [v for v in VENUES if v in params.getlist("sted")]
+    chosen_players = [p for p in players if p in params.getlist("spiller")]
+    matches = filter_matches(all_matches, months=chosen_months, venues=chosen_venues, players=chosen_players)
+
+    app_bar = templates.get_template("app_bar.html").render(logged_in=is_logged_in(request), saved=params.get("gemt"))
+    filter_bar = templates.get_template("filters.html").render(
+        rows=[
+            ("Måneder", "maaned", [(m, month_label(m), m in chosen_months) for m in months]),
+            ("Sted", "sted", [(v, v, v in chosen_venues) for v in VENUES]),
+            ("Spillere", "spiller", [(p, p, p in chosen_players) for p in players]),
+        ],
+        several_players=len(chosen_players) > 1, n_chosen=len(chosen_months) + len(chosen_venues) + len(chosen_players),
+        shown=len(matches), total=len(all_matches), active=bool(chosen_months or chosen_venues or chosen_players),
     )
-    return HTMLResponse(render_html(db_matches(session), app_bar=Markup(app_bar)))
+    return HTMLResponse(render_html(matches, app_bar=Markup(app_bar), filter_bar=Markup(filter_bar)))
 
 
 @app.get("/login", response_class=HTMLResponse)
