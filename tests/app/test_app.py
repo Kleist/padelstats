@@ -96,6 +96,16 @@ def test_form_has_score_buttons_and_fallback_fields(logged_in):
     assert 'name="s1a"' in form and 'name="s6b"' in form  # what the buttons fill in; used as-is without JavaScript
 
 
+def test_form_has_player_buttons_and_fallback_fields(logged_in):
+    logged_in.post("/ny", data=MATCH)
+    form = logged_in.get("/ny").text
+    for name in ("Anders", "Bo", "Carsten", "Dennis"):
+        assert f'class="player-btn" data-name="{name}"' in form
+    assert 'id="new-player"' in form  # type a new player as the last option
+    for slot in ("a1", "a2", "b1", "b2"):
+        assert f'data-slot="{slot}"' in form and f'name="{slot}"' in form  # buttons fill the plain fields
+
+
 def test_six_sets(logged_in):
     six = {f"s{i}{side}": v for i in range(1, 7) for side, v in (("a", "6"), ("b", "4"))}
     assert 'name="s6a"' in logged_in.get("/ny").text

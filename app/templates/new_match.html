@@ -21,19 +21,38 @@
     </div>
   </div>
 
-  <datalist id="players">{% for p in players %}<option value="{{ p }}">{% endfor %}</datalist>
+  {# Without JavaScript: plain name fields. With it, they're hidden and filled by the player buttons below. #}
+  <div id="player-inputs">
+    <datalist id="players">{% for p in players %}<option value="{{ p }}">{% endfor %}</datalist>
 
-  {% for team, label in [("a", "Hold A"), ("b", "Hold B")] %}
-  <div class="card">
+    {% for team, label in [("a", "Hold A"), ("b", "Hold B")] %}
+    <div class="card">
+      <label>{{ label }}</label>
+      <div class="row" style="margin-bottom:0">
+        {% for n in (1, 2) %}
+        <input name="{{ team }}{{ n }}" list="players" placeholder="Spiller {{ n }}" autocomplete="off"
+               autocapitalize="words" value="{{ values[team ~ n] or '' }}" aria-label="{{ label }} spiller {{ n }}">
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card" id="player-picker" hidden>
+    {% for team, label in [("a", "Hold A"), ("b", "Hold B")] %}
     <label>{{ label }}</label>
-    <div class="row" style="margin-bottom:0">
-      {% for n in (1, 2) %}
-      <input name="{{ team }}{{ n }}" list="players" placeholder="Spiller {{ n }}" autocomplete="off"
-             autocapitalize="words" value="{{ values[team ~ n] or '' }}" aria-label="{{ label }} spiller {{ n }}">
-      {% endfor %}
+    <div class="slots">
+      {% for n in (1, 2) %}<button type="button" class="slot" data-slot="{{ team }}{{ n }}" data-empty="Spiller {{ n }}"></button>{% endfor %}
+    </div>
+    {% endfor %}
+    <div class="player-grid" id="player-grid">
+      {% for p in players %}<button type="button" class="player-btn" data-name="{{ p }}">{{ p }}</button>{% endfor %}
+    </div>
+    <div class="new-player">
+      <input id="new-player" placeholder="Ny spiller" autocomplete="off" autocapitalize="words" aria-label="Ny spiller">
+      <button type="button" class="btn" id="add-player">Tilføj</button>
     </div>
   </div>
-  {% endfor %}
 
   <div class="card">
     <label>Sæt</label>
@@ -67,6 +86,22 @@
   </div>
 
 <style>
+  .slots { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .slot {
+    min-height: 2.9rem; font-size: 1.05rem; border-radius: 8px; cursor: pointer;
+    border: 1px dashed var(--border); background: var(--bg); color: var(--muted);
+  }
+  .slot.filled { border-style: solid; color: var(--text); font-weight: 700; }
+  .slot.filled::after { content: " ×"; color: var(--muted); font-weight: 400; }
+  .slot.target { border: 2px solid var(--accent); }
+  .player-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin: 0.25rem 0 0.75rem; }
+  .player-btn {
+    font-size: 1rem; padding: 0.6rem 0.25rem; border-radius: 8px; cursor: pointer; overflow-wrap: anywhere;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  }
+  .player-btn:disabled { opacity: 0.35; cursor: default; }
+  .new-player { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
+  .new-player .btn { padding: 0.6rem 1rem; }
   #sets-entered .set-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 1.1rem;
@@ -152,6 +187,72 @@
     }
     render();
   }));
+
+  inputs.hidden = true;
+  picker.hidden = false;
+  render();
+})();
+</script>
+<script>
+(function () {
+  const SLOTS = ['a1', 'a2', 'b1', 'b2'];
+  const inputs = document.getElementById('player-inputs');
+  const picker = document.getElementById('player-picker');
+  const grid = document.getElementById('player-grid');
+  const newPlayer = document.getElementById('new-player');
+  const field = slot => inputs.querySelector(`[name="${slot}"]`);
+  const slotBtn = slot => picker.querySelector(`.slot[data-slot="${slot}"]`);
+  const playerBtns = () => [...grid.querySelectorAll('.player-btn')];
+  let target = null;  // slot the next tap fills; null = first empty one
+
+  // Alphabetical, Danish order (æ, ø, å after z).
+  const collator = new Intl.Collator('da', { sensitivity: 'base' });
+  playerBtns().sort((x, y) => collator.compare(x.dataset.name, y.dataset.name)).forEach(b => grid.append(b));
+
+  const chosen = () => SLOTS.map(s => field(s).value.trim()).filter(Boolean);
+  const nextSlot = () => target || SLOTS.find(s => !field(s).value.trim());
+
+  function render() {
+    const taken = chosen().map(n => n.toLowerCase());
+    const next = nextSlot();
+    SLOTS.forEach(s => {
+      const btn = slotBtn(s), name = field(s).value.trim();
+      btn.textContent = name || btn.dataset.empty;
+      btn.classList.toggle('filled', !!name);
+      btn.classList.toggle('target', s === next);
+    });
+    playerBtns().forEach(b => { b.disabled = !next || taken.includes(b.dataset.name.toLowerCase()); });
+    newPlayer.disabled = !next;
+    document.getElementById('add-player').disabled = !next;
+  }
+
+  function choose(name) {
+    const slot = nextSlot();
+    if (!slot || !name) return;
+    // Reuse a known player's spelling when the typed name matches one.
+    const known = playerBtns().find(b => b.dataset.name.toLowerCase() === name.toLowerCase());
+    field(slot).value = known ? known.dataset.name : name;
+    target = null;
+    render();
+  }
+
+  SLOTS.forEach(s => slotBtn(s).addEventListener('click', () => {
+    if (field(s).value.trim()) { field(s).value = ''; target = s; }   // tap a filled slot to clear it
+    else { target = s; }                                              // tap an empty slot to fill it next
+    render();
+  }));
+  grid.addEventListener('click', e => {
+    const btn = e.target.closest('.player-btn');
+    if (btn && !btn.disabled) choose(btn.dataset.name);
+  });
+  function addTyped() {
+    const name = newPlayer.value.trim();
+    if (!name || chosen().some(n => n.toLowerCase() === name.toLowerCase())) return;
+    choose(name);
+    newPlayer.value = '';
+  }
+  document.getElementById('add-player').addEventListener('click', addTyped);
+  newPlayer.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addTyped(); } });
 
   inputs.hidden = true;
   picker.hidden = false;
