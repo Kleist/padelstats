@@ -39,16 +39,12 @@
   </div>
 
   <div class="card" id="player-picker" hidden>
-    {% for team, label in [("a", "Hold A"), ("b", "Hold B")] %}
-    <label>{{ label }}</label>
-    <div class="slots">
-      {% for n in (1, 2) %}<button type="button" class="slot" data-slot="{{ team }}{{ n }}" data-empty="Spiller {{ n }}"></button>{% endfor %}
-    </div>
-    {% endfor %}
+    <div id="players-entered"></div>
+    <div class="picker-title" id="player-title"></div>
     <div class="player-grid" id="player-grid">
       {% for p in players %}<button type="button" class="player-btn" data-name="{{ p }}">{{ p }}</button>{% endfor %}
     </div>
-    <div class="new-player">
+    <div class="new-player" id="new-player-row">
       <input id="new-player" placeholder="Ny spiller" autocomplete="off" autocapitalize="words" aria-label="Ny spiller">
       <button type="button" class="btn" id="add-player">Tilføj</button>
     </div>
@@ -86,14 +82,14 @@
   </div>
 
 <style>
-  .slots { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem; }
-  .slot {
-    min-height: 2.9rem; font-size: 1.05rem; border-radius: 8px; cursor: pointer;
-    border: 1px dashed var(--border); background: var(--bg); color: var(--muted);
+  #player-picker [hidden] { display: none; }  /* beat display: grid below */
+  #players-entered .team-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+  #players-entered .team-label { color: var(--muted); font-size: 0.85rem; width: 3.5rem; }
+  .chosen {
+    font-size: 1.05rem; font-weight: 700; padding: 0.45rem 0.75rem; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
   }
-  .slot.filled { border-style: solid; color: var(--text); font-weight: 700; }
-  .slot.filled::after { content: " ×"; color: var(--muted); font-weight: 400; }
-  .slot.target { border: 2px solid var(--accent); }
+  .chosen::after { content: " ×"; color: var(--muted); font-weight: 400; }
   .player-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin: 0.25rem 0 0.75rem; }
   .player-btn {
     font-size: 1rem; padding: 0.6rem 0.25rem; border-radius: 8px; cursor: pointer; overflow-wrap: anywhere;
@@ -195,60 +191,68 @@
 </script>
 <script>
 (function () {
+  // Players are picked in a fixed order: Hold A spiller 1, spiller 2, then Hold B spiller 1, spiller 2.
   const SLOTS = ['a1', 'a2', 'b1', 'b2'];
+  const TITLES = ['Hold A – spiller 1', 'Hold A – spiller 2', 'Hold B – spiller 1', 'Hold B – spiller 2'];
   const inputs = document.getElementById('player-inputs');
   const picker = document.getElementById('player-picker');
+  const list = document.getElementById('players-entered');
+  const title = document.getElementById('player-title');
   const grid = document.getElementById('player-grid');
+  const newRow = document.getElementById('new-player-row');
   const newPlayer = document.getElementById('new-player');
   const field = slot => inputs.querySelector(`[name="${slot}"]`);
-  const slotBtn = slot => picker.querySelector(`.slot[data-slot="${slot}"]`);
   const playerBtns = () => [...grid.querySelectorAll('.player-btn')];
-  let target = null;  // slot the next tap fills; null = first empty one
 
   // Alphabetical, Danish order (æ, ø, å after z).
   const collator = new Intl.Collator('da', { sensitivity: 'base' });
   playerBtns().sort((x, y) => collator.compare(x.dataset.name, y.dataset.name)).forEach(b => grid.append(b));
 
-  const chosen = () => SLOTS.map(s => field(s).value.trim()).filter(Boolean);
-  const nextSlot = () => target || SLOTS.find(s => !field(s).value.trim());
+  // Start from what's in the fields (e.g. after a validation error), in slot order.
+  const chosen = SLOTS.map(s => field(s).value.trim()).filter(Boolean);
 
   function render() {
-    const taken = chosen().map(n => n.toLowerCase());
-    const next = nextSlot();
-    SLOTS.forEach(s => {
-      const btn = slotBtn(s), name = field(s).value.trim();
-      btn.textContent = name || btn.dataset.empty;
-      btn.classList.toggle('filled', !!name);
-      btn.classList.toggle('target', s === next);
-    });
-    playerBtns().forEach(b => { b.disabled = !next || taken.includes(b.dataset.name.toLowerCase()); });
-    newPlayer.disabled = !next;
-    document.getElementById('add-player').disabled = !next;
+    SLOTS.forEach((s, i) => { field(s).value = chosen[i] || ''; });
+    // Only teams that have a player are shown; no empty fields.
+    list.replaceChildren(...[['Hold A', 0], ['Hold B', 2]].filter(([, start]) => chosen[start]).map(([label, start]) => {
+      const row = document.createElement('div');
+      row.className = 'team-row';
+      const name = document.createElement('span');
+      name.className = 'team-label';
+      name.textContent = label;
+      row.append(name);
+      [start, start + 1].filter(i => chosen[i]).forEach(i => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chosen';
+        btn.textContent = chosen[i];
+        btn.setAttribute('aria-label', `Fjern ${chosen[i]}`);
+        btn.addEventListener('click', () => { chosen.splice(i, 1); render(); });  // later picks move up
+        row.append(btn);
+      });
+      return row;
+    }));
+    const done = chosen.length >= SLOTS.length;
+    title.textContent = done ? '' : TITLES[chosen.length];
+    title.hidden = grid.hidden = newRow.hidden = done;
+    const taken = chosen.map(n => n.toLowerCase());
+    playerBtns().forEach(b => { b.disabled = taken.includes(b.dataset.name.toLowerCase()); });
   }
 
   function choose(name) {
-    const slot = nextSlot();
-    if (!slot || !name) return;
+    if (!name || chosen.length >= SLOTS.length || chosen.some(n => n.toLowerCase() === name.toLowerCase())) return;
     // Reuse a known player's spelling when the typed name matches one.
     const known = playerBtns().find(b => b.dataset.name.toLowerCase() === name.toLowerCase());
-    field(slot).value = known ? known.dataset.name : name;
-    target = null;
+    chosen.push(known ? known.dataset.name : name);
     render();
   }
 
-  SLOTS.forEach(s => slotBtn(s).addEventListener('click', () => {
-    if (field(s).value.trim()) { field(s).value = ''; target = s; }   // tap a filled slot to clear it
-    else { target = s; }                                              // tap an empty slot to fill it next
-    render();
-  }));
   grid.addEventListener('click', e => {
     const btn = e.target.closest('.player-btn');
     if (btn && !btn.disabled) choose(btn.dataset.name);
   });
   function addTyped() {
-    const name = newPlayer.value.trim();
-    if (!name || chosen().some(n => n.toLowerCase() === name.toLowerCase())) return;
-    choose(name);
+    choose(newPlayer.value.trim());
     newPlayer.value = '';
   }
   document.getElementById('add-player').addEventListener('click', addTyped);

@@ -103,7 +103,7 @@ def test_form_has_player_buttons_and_fallback_fields(logged_in):
         assert f'class="player-btn" data-name="{name}"' in form
     assert 'id="new-player"' in form  # type a new player as the last option
     for slot in ("a1", "a2", "b1", "b2"):
-        assert f'data-slot="{slot}"' in form and f'name="{slot}"' in form  # buttons fill the plain fields
+        assert f'name="{slot}"' in form  # the buttons fill these plain fields, in this order
 
 
 def test_six_sets(logged_in):
