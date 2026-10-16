@@ -817,11 +817,13 @@ document.querySelectorAll('table').forEach(table => {
 
   function drawChart() {
     const players = [...chartPlayers.keys()];
-    const START_SORTABLE = '2026-01-01';
-    const START_DISPLAY = '01/01/2026';
+    // Everyone starts at 1500 on 1 January of the first year in the shown matches.
+    const firstYear = Object.values(activeEloHistory()).flat().map(d => d.date_sortable.slice(0, 4)).sort()[0] || '2026';
+    const START_SORTABLE = `${firstYear}-01-01`;
+    const START_DISPLAY = `01/01/${firstYear}`;
     const STEP = 25;
 
-    // Build unified date axis from all selected players, anchored at 1500 on 2026-01-01
+    // Build unified date axis from all selected players, anchored at 1500 on START_SORTABLE
     const dateMap = new Map();
     dateMap.set(START_SORTABLE, START_DISPLAY);
     players.forEach(name => {
