@@ -72,15 +72,20 @@ def parse_row(row):
     }
 
 
-VENUES = ["begge", "inde", "ude"]
+def filter_matches(matches, months=(), venues=(), players=()):
+    """Matches in any of the given months ("2026-01"), at any of the given venues ("Inde"/"Ude"), with all of
+    the given players.
 
-
-def filter_by_venue(matches, venue):
-    """Return matches at the given venue. 'begge' returns all matches."""
-    if venue == "begge":
-        return list(matches)
-    label = venue.capitalize()
-    return [m for m in matches if m["sted"] == label]
+    Empty means no filter on that field. With players, a match is kept only if every one of them played in it
+    (on either team): one player gives their matches, four give the matches among exactly them.
+    """
+    months, venues, wanted = set(months), set(venues), set(players)
+    return [
+        m for m in matches
+        if (not months or m["date_sortable"][:7] in months)
+        and (not venues or m["sted"] in venues)
+        and wanted <= set(m["team_a"]) | set(m["team_b"])
+    ]
 
 
 def compute_player_stats(matches):
@@ -244,20 +249,16 @@ def compute_pair_stats(matches):
     return result
 
 
-def build_venue_data(matches):
-    """Compute leaderboard/Elo/pairs for each venue (begge/inde/ude)."""
-    venue_data = {}
-    for venue in VENUES:
-        subset = filter_by_venue(matches, venue)
-        leaderboard = compute_player_stats(subset)
-        elo, elo_history = compute_elo(subset)
-        pairs = compute_pair_stats(subset)
-        venue_data[venue] = {
-            "leaderboard": leaderboard,
-            "elo": elo,
-            "pairs": pairs,
-            "elo_dict": {p["name"]: p["elo"] for p in elo},
-            "pair_counts": {p["players"]: p["played"] for p in pairs},
-            "elo_history": dict(elo_history),
-        }
-    return venue_data
+def build_stats(matches):
+    """Compute leaderboard, Elo and pair stats for one set of matches."""
+    leaderboard = compute_player_stats(matches)
+    elo, elo_history = compute_elo(matches)
+    pairs = compute_pair_stats(matches)
+    return {
+        "leaderboard": leaderboard,
+        "elo": elo,
+        "pairs": pairs,
+        "elo_dict": {p["name"]: p["elo"] for p in elo},
+        "pair_counts": {p["players"]: p["played"] for p in pairs},
+        "elo_history": dict(elo_history),
+    }

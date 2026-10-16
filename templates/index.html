@@ -73,11 +73,6 @@
     gap: 0.5rem;
     margin-bottom: 1.5rem;
   }
-  .venue-filter {
-    display: flex;
-    gap: 0.5rem;
-    margin: 0 0 1.5rem;
-  }
   .player-btn {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -149,15 +144,8 @@
 {{ app_bar or "" }}
 <h1>Padel Stats</h1>
 <p class="subtitle">{{ matches|length }} kampe spillet</p>
-
-<div class="venue-filter">
-  {% for venue in venues %}
-  <button class="player-btn venue-btn{% if venue == default_venue %} selected{% endif %}" data-venue="{{ venue }}">{{ venue|capitalize }}</button>
-  {% endfor %}
-</div>
-
-{% for venue in venues %}
-<div class="venue-panel" data-venue="{{ venue }}"{% if venue != default_venue %} hidden{% endif %}>
+{{ filter_bar or "" }}
+<div class="stats-panel">
 <h2>Leaderboard</h2>
 <table>
   <thead>
@@ -177,7 +165,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for p in venue_data[venue].leaderboard %}
+    {% for p in stats.leaderboard %}
     <tr>
       <td>{{ loop.index }}</td>
       <td><strong><a class="player-link" data-player="{{ p.name }}">{{ p.name }}</a></strong></td>
@@ -208,7 +196,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for p in venue_data[venue].elo %}
+    {% for p in stats.elo %}
     <tr>
       <td>{{ loop.index }}</td>
       <td><strong><a class="player-link" data-player="{{ p.name }}">{{ p.name }}</a></strong></td>
@@ -233,7 +221,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for p in venue_data[venue].pairs %}
+    {% for p in stats.pairs %}
     <tr>
       <td><strong>{{ p.players }}</strong></td>
       <td data-sort="{{ p.played }}">{{ p.played }}</td>
@@ -246,7 +234,6 @@
   </tbody>
 </table>
 </div>
-{% endfor %}
 
 <div id="elo-chart-container">
   <div id="elo-chart-header">
@@ -301,9 +288,8 @@
 <div id="matchup-result" style="min-height: 320px;"></div>
 
 <script>
-const venueData = {{ venue_data_json }};
-let currentVenue = {{ default_venue|tojson }};
-function activeData() { return venueData[currentVenue]; }
+const statsData = {{ stats_json }};
+function activeData() { return statsData; }
 function activeElo() { return activeData().elo; }
 function activePairCounts() { return activeData().pairCounts; }
 function activeEloHistory() { return activeData().eloHistory; }
@@ -316,7 +302,7 @@ function pairKey(a, b) {
   return [a, b].sort().join(' & ');
 }
 
-Object.keys(venueData.begge.elo).sort().forEach(name => {
+Object.keys(statsData.elo).sort().forEach(name => {
   const btn = document.createElement('button');
   btn.className = 'player-btn';
   btn.textContent = name;
@@ -332,19 +318,6 @@ Object.keys(venueData.begge.elo).sort().forEach(name => {
     else result.innerHTML = '';
   });
   grid.appendChild(btn);
-});
-
-document.querySelectorAll('.venue-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    currentVenue = btn.dataset.venue;
-    document.querySelectorAll('.venue-btn').forEach(b =>
-      b.classList.toggle('selected', b.dataset.venue === currentVenue));
-    document.querySelectorAll('.venue-panel').forEach(p =>
-      p.toggleAttribute('hidden', p.dataset.venue !== currentVenue));
-    if (selected.size === 4) recommend();
-    if (typeof window.relocateEloChart === 'function') window.relocateEloChart();
-    if (typeof redrawEloChart === 'function') redrawEloChart();
-  });
 });
 
 function recommend() {
@@ -499,7 +472,7 @@ document.querySelectorAll('table').forEach(table => {
   }
 
   function relocateChart() {
-    const panel = document.querySelector('.venue-panel:not([hidden])');
+    const panel = document.querySelector('.stats-panel');
     if (!panel) return;
     const anchor = panel.querySelector('.makkerpar-heading');
     if (anchor && container.parentNode !== panel) {
@@ -513,11 +486,13 @@ document.querySelectorAll('table').forEach(table => {
 
   function drawChart() {
     const players = [...chartPlayers.keys()];
-    const START_SORTABLE = '2026-01-01';
-    const START_DISPLAY = '01/01/2026';
+    // Everyone starts at 1500 on 1 January of the first year in the shown matches.
+    const firstYear = Object.values(activeEloHistory()).flat().map(d => d.date_sortable.slice(0, 4)).sort()[0] || '2026';
+    const START_SORTABLE = `${firstYear}-01-01`;
+    const START_DISPLAY = `01/01/${firstYear}`;
     const STEP = 25;
 
-    // Build unified date axis from all selected players, anchored at 1500 on 2026-01-01
+    // Build unified date axis from all selected players, anchored at 1500 on START_SORTABLE
     const dateMap = new Map();
     dateMap.set(START_SORTABLE, START_DISPLAY);
     players.forEach(name => {
