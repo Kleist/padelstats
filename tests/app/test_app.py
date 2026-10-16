@@ -88,6 +88,14 @@ def test_stats_include_entered_matches(logged_in):
     assert '"Anders": [{"date": "09/10/2026"' in page  # Elo history for the chart
 
 
+def test_form_has_score_buttons_and_fallback_fields(logged_in):
+    form = logged_in.get("/ny").text
+    for side in ("a", "b"):
+        for n in range(8):
+            assert f'data-side="{side}" data-score="{n}"' in form
+    assert 'name="s1a"' in form and 'name="s6b"' in form  # what the buttons fill in; used as-is without JavaScript
+
+
 def test_six_sets(logged_in):
     six = {f"s{i}{side}": v for i in range(1, 7) for side, v in (("a", "6"), ("b", "4"))}
     assert 'name="s6a"' in logged_in.get("/ny").text
