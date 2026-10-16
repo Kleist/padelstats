@@ -244,20 +244,16 @@ def compute_pair_stats(matches):
     return result
 
 
-def build_venue_data(matches):
-    """Compute leaderboard/Elo/pairs for each venue (begge/inde/ude)."""
-    venue_data = {}
-    for venue in VENUES:
-        subset = filter_by_venue(matches, venue)
-        leaderboard = compute_player_stats(subset)
-        elo, elo_history = compute_elo(subset)
-        pairs = compute_pair_stats(subset)
-        venue_data[venue] = {
-            "leaderboard": leaderboard,
-            "elo": elo,
-            "pairs": pairs,
-            "elo_dict": {p["name"]: p["elo"] for p in elo},
-            "pair_counts": {p["players"]: p["played"] for p in pairs},
-            "elo_history": dict(elo_history),
-        }
-    return venue_data
+def build_stats(matches):
+    """Compute leaderboard, Elo and pair stats for one set of matches."""
+    leaderboard = compute_player_stats(matches)
+    elo, elo_history = compute_elo(matches)
+    pairs = compute_pair_stats(matches)
+    return {
+        "leaderboard": leaderboard,
+        "elo": elo,
+        "pairs": pairs,
+        "elo_dict": {p["name"]: p["elo"] for p in elo},
+        "pair_counts": {p["players"]: p["played"] for p in pairs},
+        "elo_history": dict(elo_history),
+    }

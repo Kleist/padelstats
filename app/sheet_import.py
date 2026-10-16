@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.main import get_or_create_player
 from app.matches import db_matches
 from app.models import Match, MatchSet
-from padel.stats import build_venue_data, parse_row
+from padel.stats import build_stats, parse_row
 
 HEADER_ROWS = 2  # same as parse_matches
 
@@ -111,13 +111,12 @@ def import_rows(session: Session, rows) -> ImportReport:
     return report
 
 
-def _comparable(venue_data):
+def _comparable(stats):
     """Stats with the display-only date string removed (the sheet may format dates differently)."""
-    for d in venue_data.values():
-        d["elo_history"] = {
-            p: [{k: v for k, v in e.items() if k != "date"} for e in hist] for p, hist in d["elo_history"].items()
-        }
-    return venue_data
+    stats["elo_history"] = {
+        p: [{k: v for k, v in e.items() if k != "date"} for e in hist] for p, hist in stats["elo_history"].items()
+    }
+    return stats
 
 
 def verify(session: Session, rows):
@@ -131,9 +130,8 @@ def verify(session: Session, rows):
         a, b = dict(a, date=None), dict(b, date=None)
         if a != b:
             differences.append(f"match {i + 1}: sheet {a} != database {b}")
-    sheet_stats, db_stats = _comparable(build_venue_data(valid)), _comparable(build_venue_data(from_db))
-    for venue in sheet_stats:
-        for key in sheet_stats[venue]:
-            if sheet_stats[venue][key] != db_stats[venue][key]:
-                differences.append(f"{venue}/{key} differs")
+    sheet_stats, db_stats = _comparable(build_stats(valid)), _comparable(build_stats(from_db))
+    for key in sheet_stats:
+        if sheet_stats[key] != db_stats[key]:
+            differences.append(f"{key} differs")
     return differences
