@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.matches import db_matches
 from app.models import Match, Player
 from app.sheet_import import import_rows, verify
-from padel.stats import build_venue_data, parse_matches
+from padel.stats import build_stats, parse_matches
 from tests.conftest import SAMPLE_ROWS
 
 
@@ -43,10 +43,9 @@ def test_import_creates_matches_and_players(session, rows):
 def test_stats_from_database_equal_stats_from_sheet(session, rows):
     import_rows(session, rows)
     assert verify(session, rows) == []
-    from_sheet, from_db = build_venue_data(parse_matches(rows)), build_venue_data(db_matches(session))
-    for venue in from_sheet:
-        for key in ("leaderboard", "elo", "pairs", "elo_dict", "pair_counts"):
-            assert from_db[venue][key] == from_sheet[venue][key], (venue, key)
+    from_sheet, from_db = build_stats(parse_matches(rows)), build_stats(db_matches(session))
+    for key in ("leaderboard", "elo", "pairs", "elo_dict", "pair_counts"):
+        assert from_db[key] == from_sheet[key], key
 
 
 def test_reimport_is_idempotent(session, rows):
@@ -107,4 +106,4 @@ def test_verify_reports_differences(session, rows):
     session.commit()
     differences = verify(session, rows)
     assert differences[0].startswith("match 1:")
-    assert "begge/leaderboard differs" in differences
+    assert "leaderboard differs" in differences
