@@ -19,7 +19,7 @@ A web app (`app/`) backed by Postgres is being built to replace the Sheet: playe
 ### Web app (`app/`)
 
 - FastAPI + Jinja2 (server-rendered, no JS build), SQLAlchemy 2.0 models in `app/models.py`, routes in `app/main.py`, templates in `app/templates/`
-- Landing page `/` is the same stats page as the static site (`padel.render.render_html()` on `db_matches()`), computed live from the database, with `app/templates/app_bar.html` on top (+ Indtast kamp, log ud)
+- Landing page `/` is the same stats page as the static site (`padel.render.render_html()` on `db_matches()`), computed live from the database, with `app/templates/app_bar.html` on top (+ Indtast kamp, log ud) and `app/templates/filters.html` below the title, behind a "Filtre" toggle (`<details>`, closed by default, open state kept in `sessionStorage`): toggle buttons for months ("januar 26", any of the chosen), Inde/Ude and players (a match is kept only if all chosen players played), as URL parameters `?maaned=2026-01&maaned=2026-02&sted=Inde&spiller=Bo`, applied on the server with `padel.stats.filter_matches()`. The static site has no filters and shows all matches
 - Database: Postgres (Neon) in production via `DATABASE_URL`; defaults to SQLite `padelstats.db` locally
 - Schema changes: edit `app/models.py` **and** add a migration in `migrations/versions/` (CI runs `alembic check` to catch drift)
 - Login: shared `ADMIN_PASSWORD` → signed session cookie (`SESSION_SECRET`); `COOKIE_SECURE=0` for plain-http local runs

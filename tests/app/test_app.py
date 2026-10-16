@@ -165,3 +165,63 @@ def test_requires_a_set(logged_in):
 def test_logout(logged_in):
     logged_in.post("/logout")
     assert logged_in.get("/ny", follow_redirects=False).status_code == 303
+
+
+def _filter_data(client):
+    """Three matches: 2025 inde (Anders, Bo, Carsten, Dennis), 2026 ude and 2026 inde (with Øjvind)."""
+    client.post("/ny", data={**MATCH, "played_on": "2025-11-02", "venue": "Inde"})
+    client.post("/ny", data={**MATCH, "played_on": "2026-01-15", "venue": "Ude"})
+    client.post("/ny", data={**MATCH, "played_on": "2026-03-05", "venue": "Inde", "b2": "Øjvind"})
+
+
+def test_filters_by_months_venue_and_players(logged_in):
+    _filter_data(logged_in)
+    assert "3 kampe spillet" in logged_in.get("/").text
+    assert "1 kampe spillet" in logged_in.get("/?maaned=2026-01").text
+    assert "2 kampe spillet" in logged_in.get("/?maaned=2025-11&maaned=2026-03").text  # any of the months
+    assert "2 kampe spillet" in logged_in.get("/?sted=Inde").text
+    assert "3 kampe spillet" in logged_in.get("/?sted=Inde&sted=Ude").text
+    assert "1 kampe spillet" in logged_in.get("/?maaned=2026-01&maaned=2026-03&sted=Inde").text
+    assert "1 kampe spillet" in logged_in.get("/?spiller=Øjvind").text
+    assert "3 kampe spillet" in logged_in.get("/?spiller=Anders&spiller=Bo").text
+    page = logged_in.get("/?spiller=Carsten&spiller=Dennis").text  # all chosen players must have played
+    assert "2 kampe spillet" in page
+    assert "Viser 2 af 3 kampe (hvor alle valgte spillere var med)" in page
+    assert 'value="Carsten" checked' in page and 'value="Bo" checked' not in page
+
+
+def test_filter_bar_shows_choices_and_ignores_unknown_values(logged_in):
+    _filter_data(logged_in)
+    page = logged_in.get("/?aar=2026&maaned=2024-13&sted=Mars&spiller=Nobody").text
+    assert "3 kampe spillet" in page
+    assert "Nulstil" not in page
+    assert "Alle år" not in page and "Inde og ude" not in page
+    months = [m for m in ("november 25", "januar 26", "marts 26") if m in page]
+    assert months == ["november 25", "januar 26", "marts 26"]
+    assert page.index("november 25") < page.index("januar 26") < page.index("marts 26")  # calendar order
+    assert 'name="maaned" value="2026-01"' in page and 'name="sted" value="Inde"' in page
+    names = [n for n in ("Anders", "Bo", "Carsten", "Dennis", "Øjvind") if f'value="{n}"' in page]
+    assert names == ["Anders", "Bo", "Carsten", "Dennis", "Øjvind"]
+    assert page.index('value="Dennis"') < page.index('value="Øjvind"')  # Danish order: Ø after Z
+
+
+def test_filters_are_behind_a_toggle(logged_in):
+    _filter_data(logged_in)
+    page = logged_in.get("/").text
+    assert '<details id="filter-box">' in page  # closed by default
+    assert ">Filtre</summary>" in page and "Viser" not in page
+    page = logged_in.get("/?maaned=2026-01&spiller=Anders&spiller=Bo").text
+    assert ">Filtre (3)</summary>" in page
+    assert "Viser 1 af 3 kampe" in page  # shown outside the toggle, so an active filter is visible
+
+
+def test_month_label():
+    from app.main import month_label
+    assert month_label("2026-01") == "januar 26"
+    assert month_label("2025-12") == "december 25"
+
+
+def test_danish_sort_key():
+    from app.main import danish_sort_key
+    names = ["Åse", "Øjvind", "Zack", "Ærtebjerg", "anders", "Bo"]
+    assert sorted(names, key=danish_sort_key) == ["anders", "Bo", "Zack", "Ærtebjerg", "Øjvind", "Åse"]

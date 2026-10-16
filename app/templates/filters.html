@@ -1,0 +1,56 @@
+<style>
+  .filters { margin: 0 0 1.5rem; display: grid; gap: 0.6rem; }
+  .filters details { display: grid; gap: 0.6rem; }
+  .filters details[open] > summary { margin-bottom: 0.6rem; }
+  .filters summary { justify-self: start; list-style: none; }
+  .filters summary::-webkit-details-marker { display: none; }
+  .filters summary::after { content: " ▾"; }
+  .filters details[open] > summary::after { content: " ▴"; }
+  .filters .filter-row + .filter-row { margin-top: 0.6rem; }
+  .filters .filter-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+  .filters label.player-btn { position: relative; }
+  /* The checkboxes stay in the form (and for screen readers); the labels are the buttons. */
+  .filters label.player-btn input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .filters label.player-btn:has(input:focus-visible) { outline: 2px solid var(--accent); }
+  .filters .filter-status { color: var(--muted); font-size: 0.85rem; }
+  .filters .filter-status a { color: var(--accent); }
+</style>
+<form class="filters" id="filters" method="get" action="/">
+  {# Closed by default; the "Viser X af Y kampe" line below stays visible so an active filter is never hidden. #}
+  <details id="filter-box">
+    <summary class="player-btn{{ ' selected' if active }}">Filtre{% if n_chosen %} ({{ n_chosen }}){% endif %}</summary>
+    {# One row of toggle buttons per filter; nothing chosen in a row means no filter on it. #}
+    {% for label, name, options in rows %}
+    <div class="filter-row" role="group" aria-label="{{ label }}">
+      {% for value, text, checked in options %}
+      <label class="player-btn{{ ' selected' if checked }}"><input type="checkbox" name="{{ name }}" value="{{ value }}"{{ " checked" if checked }}>{{ text }}</label>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    <noscript><button type="submit">Filtrér</button></noscript>
+  </details>
+  {% if active %}
+  <div class="filter-status">
+    Viser {{ shown }} af {{ total }} kampe{% if several_players %} (hvor alle valgte spillere var med){% endif %} · <a href="/">Nulstil</a>
+  </div>
+  {% endif %}
+</form>
+<script>
+(function () {
+  // Remember whether the filters are open across the page reloads that applying a filter causes.
+  const box = document.getElementById('filter-box');
+  try { if (sessionStorage.getItem('filtersOpen') === '1') box.open = true; } catch (e) {}
+  box.addEventListener('toggle', () => {
+    try { sessionStorage.setItem('filtersOpen', box.open ? '1' : '0'); } catch (e) {}
+  });
+
+  // Apply a filter as soon as it changes; leave empty fields out of the URL.
+  const form = document.getElementById('filters');
+  form.addEventListener('change', () => {
+    const params = new URLSearchParams();
+    for (const [k, v] of new FormData(form)) if (v) params.append(k, v);
+    const qs = params.toString();
+    location.href = '/' + (qs ? '?' + qs : '');
+  });
+})();
+</script>
