@@ -79,7 +79,7 @@ Web app (GitHub secrets, synced to Fly by the deploy workflow): `DATABASE_URL`, 
 - **Production:** GitHub Actions deploys to GitHub Pages on push to `main` and daily at 06:00 UTC (`.github/workflows/deploy.yml`)
 - **PR preview:** Builds on pull requests and uploads artifact (`.github/workflows/preview.yml`)
 - **CI checks:** Lint (ruff) → Tests (pytest) → Build, in both workflows
-- **Web app:** `.github/workflows/app.yml` — lint → tests on Postgres → `alembic check` on every PR; on `main` deploys to Fly.io (`padelstats-kleist`), and on same-repo PRs to the shared staging app `padelstats-kleist-staging` (separate DB via `STAGING_DATABASE_URL`, wiped and restored from the latest nightly backup on each deploy, which tests the backups); both smoke-test `/healthz/db` for the new commit SHA. Deploys are skipped (with a warning) until `FLY_API_TOKEN` (and for staging `STAGING_DATABASE_URL`) is set.
+- **Web app:** `.github/workflows/app.yml` — lint → tests on Postgres → `alembic check` on every PR; on `main` deploys to Fly.io (`padelstats-kleist`), and on same-repo PRs to the shared staging app `padelstats-kleist-staging` (separate DB via `STAGING_DATABASE_URL`, wiped and restored from the latest nightly backup on each deploy, which tests the backups; the staging link is posted as a single, updated PR comment); both smoke-test `/healthz/db` for the new commit SHA. Deploys are skipped (with a warning) until `FLY_API_TOKEN` (and for staging `STAGING_DATABASE_URL`) is set.
 
 ## Commits & pull requests
 
