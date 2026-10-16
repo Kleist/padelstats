@@ -47,7 +47,7 @@ Every pull request can deploy to a separate staging app, <https://padelstats-kle
 2. Click **Connect** on the `staging` branch, turn **Connection pooling off**, and copy the connection string.
 3. Add it as a repository secret named `STAGING_DATABASE_URL`.
 
-Each push to a PR then runs tests and deploys the PR to staging. Migrations run against the staging database only. The PR page shows a **View deployment** button. Staging uses the same `ADMIN_PASSWORD` and has its own login cookie. There is only one staging app, so the most recently pushed PR is the one running there.
+Each push to a PR then runs tests and deploys the PR to staging. Migrations run against the staging database only. The PR page shows a **View deployment** button, and the workflow posts the staging link as a PR comment (one comment per PR, updated on every staging deploy). Staging uses the same `ADMIN_PASSWORD` and has its own login cookie. There is only one staging app, so the most recently pushed PR is the one running there.
 
 Every staging deploy wipes the staging database and restores the latest nightly production backup into it (see 7. Backups). Each PR therefore starts from fresh production data, its migrations are tested against real data, and every PR checks that the backups can actually be restored: if the restore fails, the staging deploy fails. Anything entered on staging is lost on the next deploy. Until a backup exists, the staging deploy fails: run **Actions → Database backup** once, then re-run the failed job.
 

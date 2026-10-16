@@ -65,6 +65,7 @@ jobs:
     permissions:
       contents: read
       actions: read  # download the latest backup artifact for staging
+      pull-requests: write  # post the staging link on the PR
     concurrency:
       group: fly-deploy-${{ github.event_name == 'pull_request' && 'staging' || 'production' }}
       cancel-in-progress: false
@@ -119,6 +120,7 @@ jobs:
       # Staging always starts from the latest nightly production backup. This tests that the backup
       # restores, and runs the PR's migrations (release_command) against real data.
       - name: Restore latest production backup into staging
+        id: restore
         if: steps.configured.outputs.ok == 'true' && env.TARGET == 'staging'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -144,6 +146,7 @@ jobs:
             psql -v ON_ERROR_STOP=1 -At -d \"\$STAGING_DATABASE_URL\" -c 'SELECT count(*) FROM matches'
           ")
           echo "::notice::Restored production backup from $created into staging: $matches matches"
+          { echo "matches=$matches"; echo "created=$created"; } >> "$GITHUB_OUTPUT"
 
       - name: Deploy
         if: steps.configured.outputs.ok == 'true'
@@ -164,3 +167,31 @@ jobs:
           done
           echo "::error::$url did not report version $GITHUB_SHA"
           exit 1
+
+      # One comment per PR, edited on every staging deploy so pushes don't pile up comments.
+      - name: Post staging link on the PR
+        if: steps.configured.outputs.ok == 'true' && env.TARGET == 'staging'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MATCHES: ${{ steps.restore.outputs.matches }}
+          BACKUP_CREATED: ${{ steps.restore.outputs.created }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          marker="<!-- staging-deploy -->"
+          url="https://$FLY_APP.fly.dev"
+          body="$marker
+          🚀 **Staging:** $url
+
+          Deployed \`${HEAD_SHA:0:7}\` on $(date -u '+%Y-%m-%d %H:%M UTC') ([run]($RUN_URL)), with production data from the backup of $BACKUP_CREATED ($MATCHES matches).
+
+          Anything entered on staging is wiped on the next staging deploy and never reaches production. There is one staging app, so a push to another PR replaces this one there."
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" | head -1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body" > /dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body" > /dev/null
+          fi
+          echo "::notice::Posted staging link on PR #$PR"
