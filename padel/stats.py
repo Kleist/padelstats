@@ -72,15 +72,20 @@ def parse_row(row):
     }
 
 
-VENUES = ["begge", "inde", "ude"]
+def filter_matches(matches, months=(), venues=(), players=()):
+    """Matches in any of the given months ("2026-01"), at any of the given venues ("Inde"/"Ude"), with all of
+    the given players.
 
-
-def filter_by_venue(matches, venue):
-    """Return matches at the given venue. 'begge' returns all matches."""
-    if venue == "begge":
-        return list(matches)
-    label = venue.capitalize()
-    return [m for m in matches if m["sted"] == label]
+    Empty means no filter on that field. With players, a match is kept only if every one of them played in it
+    (on either team): one player gives their matches, four give the matches among exactly them.
+    """
+    months, venues, wanted = set(months), set(venues), set(players)
+    return [
+        m for m in matches
+        if (not months or m["date_sortable"][:7] in months)
+        and (not venues or m["sted"] in venues)
+        and wanted <= set(m["team_a"]) | set(m["team_b"])
+    ]
 
 
 def compute_player_stats(matches):

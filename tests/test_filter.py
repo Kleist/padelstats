@@ -1,34 +1,49 @@
-"""Tests for filter_by_venue()."""
+"""Tests for filter_matches()."""
 
-from padel.stats import filter_by_venue
-
-
-def _m(sted, name="X"):
-    return {"sted": sted, "team_a": [name], "team_b": [], "winner": "draw"}
+from padel.stats import filter_matches
 
 
-MATCHES = [_m("Inde", "a"), _m("Ude", "b"), _m("Inde", "c"), _m("Ude", "d")]
+def _m(date_sortable, sted, a, b):
+    return {"date_sortable": date_sortable, "sted": sted, "team_a": a, "team_b": b}
 
 
-def test_begge_returns_all():
-    assert filter_by_venue(MATCHES, "begge") == MATCHES
+M1 = _m("2025-11-02", "Inde", ["Anders", "Bo"], ["Carsten", "Dennis"])
+M2 = _m("2026-01-15", "Ude", ["Anders", "Carsten"], ["Bo", "Erik"])
+M3 = _m("2026-03-05", "Inde", ["Bo", "Dennis"], ["Anders", "Erik"])
+MATCHES = [M1, M2, M3]
 
 
-def test_begge_returns_a_copy():
-    out = filter_by_venue(MATCHES, "begge")
+def test_no_filters_returns_all_as_a_copy():
+    out = filter_matches(MATCHES)
+    assert out == MATCHES
     out.clear()
-    assert len(MATCHES) == 4
+    assert len(MATCHES) == 3
 
 
-def test_inde_filters():
-    out = filter_by_venue(MATCHES, "inde")
-    assert [m["team_a"][0] for m in out] == ["a", "c"]
+def test_months():
+    assert filter_matches(MATCHES, months=["2026-01"]) == [M2]
+    assert filter_matches(MATCHES, months=["2025-01"]) == []
 
 
-def test_ude_filters():
-    out = filter_by_venue(MATCHES, "ude")
-    assert [m["team_a"][0] for m in out] == ["b", "d"]
+def test_several_months_means_any_of_them():
+    assert filter_matches(MATCHES, months=["2025-11", "2026-03"]) == [M1, M3]
 
 
-def test_unknown_venue_returns_empty():
-    assert filter_by_venue(MATCHES, "tag") == []
+def test_venues():
+    assert filter_matches(MATCHES, venues=["Inde"]) == [M1, M3]
+    assert filter_matches(MATCHES, venues=["Ude"]) == [M2]
+    assert filter_matches(MATCHES, venues=["Inde", "Ude"]) == MATCHES
+
+
+def test_one_player_on_either_team():
+    assert filter_matches(MATCHES, players=["Erik"]) == [M2, M3]
+
+
+def test_all_selected_players_must_have_played():
+    assert filter_matches(MATCHES, players=["Anders", "Bo"]) == MATCHES
+    assert filter_matches(MATCHES, players=["Carsten", "Dennis"]) == [M1]
+    assert filter_matches(MATCHES, players=["Anders", "Bo", "Carsten", "Dennis"]) == [M1]
+
+
+def test_filters_combine():
+    assert filter_matches(MATCHES, months=["2026-01", "2026-03"], venues=["Inde"], players=["Erik"]) == [M3]
