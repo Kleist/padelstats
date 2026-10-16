@@ -36,16 +36,128 @@
   {% endfor %}
 
   <div class="card">
-    <div class="row" style="margin-bottom:0.25rem"><label>Hold A</label><label>Hold B</label></div>
-    {% for i in range(1, max_sets + 1) %}
-    <div class="row">
-      {% for side in ("a", "b") %}
-      <input name="s{{ i }}{{ side }}" type="number" inputmode="numeric" min="0" max="7"
-             placeholder="Sæt {{ i }}" value="{{ values['s' ~ i ~ side] or '' }}" aria-label="Sæt {{ i }} hold {{ side|upper }}">
+    <label>Sæt</label>
+    {# Without JavaScript: plain number fields. With it, they're hidden and filled by the score buttons below. #}
+    <div id="set-inputs">
+      <div class="row" style="margin-bottom:0.25rem"><label>Hold A</label><label>Hold B</label></div>
+      {% for i in range(1, max_sets + 1) %}
+      <div class="row">
+        {% for side in ("a", "b") %}
+        <input name="s{{ i }}{{ side }}" type="number" inputmode="numeric" min="0" max="7"
+               placeholder="Sæt {{ i }}" value="{{ values['s' ~ i ~ side] or '' }}" aria-label="Sæt {{ i }} hold {{ side|upper }}">
+        {% endfor %}
+      </div>
       {% endfor %}
     </div>
-    {% endfor %}
+
+    <div id="score-picker" hidden>
+      <div id="sets-entered"></div>
+      <div id="picker">
+        <div class="picker-title" id="picker-title"></div>
+        <div class="picker-cols">
+          {% for side, label in [("a", "Hold A"), ("b", "Hold B")] %}
+          <div class="picker-col" data-side="{{ side }}">
+            <div class="picker-label">{{ label }}</div>
+            {% for n in range(8) %}<button type="button" class="score-btn" data-side="{{ side }}" data-score="{{ n }}">{{ n }}</button>{% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
   </div>
+
+<style>
+  #sets-entered .set-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 1.1rem;
+  }
+  #sets-entered .set-score { font-weight: 700; font-variant-numeric: tabular-nums; }
+  #sets-entered .set-note { color: var(--muted); font-size: 0.85rem; }
+  #sets-entered .remove-set { background: none; border: 0; color: var(--muted); font-size: 1.4rem; padding: 0 0.5rem; cursor: pointer; }
+  .picker-title { color: var(--muted); font-size: 0.85rem; margin: 0.75rem 0 0.5rem; }
+  .picker-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .picker-col { display: grid; gap: 0.4rem; }
+  .picker-label { color: var(--muted); font-size: 0.85rem; text-align: center; }
+  .score-btn {
+    font-size: 1.3rem; font-weight: 700; padding: 0.55rem 0; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  }
+  .score-btn.selected { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+</style>
+<script>
+(function () {
+  const MAX_SETS = {{ max_sets }};
+  const inputs = document.getElementById('set-inputs');
+  const picker = document.getElementById('score-picker');
+  const list = document.getElementById('sets-entered');
+  const pickerBox = document.getElementById('picker');
+  const title = document.getElementById('picker-title');
+  const field = (i, side) => inputs.querySelector(`[name="s${i}${side}"]`);
+  // Same rule as padel.stats: a set is won with 7 games, or 6 with the other side on 4 or fewer.
+  const won = (x, y) => x === 7 || (x === 6 && y <= 4);
+  const unfinished = s => !won(+s[0], +s[1]) && !won(+s[1], +s[0]);
+
+  // Start from what's in the fields (e.g. after a validation error).
+  const sets = [];
+  for (let i = 1; i <= MAX_SETS; i++) {
+    const a = field(i, 'a').value, b = field(i, 'b').value;
+    if (a !== '' && b !== '') sets.push([a, b]);
+  }
+  let pending = {};
+
+  function render() {
+    // Write the sets back into the form fields the server reads.
+    for (let i = 1; i <= MAX_SETS; i++) {
+      const s = sets[i - 1];
+      field(i, 'a').value = s ? s[0] : '';
+      field(i, 'b').value = s ? s[1] : '';
+    }
+    list.replaceChildren(...sets.map((s, i) => {
+      const row = document.createElement('div');
+      row.className = 'set-row';
+      const text = document.createElement('span');
+      const score = document.createElement('span');
+      score.className = 'set-score';
+      score.textContent = `${s[0]}–${s[1]}`;
+      text.append(`Sæt ${i + 1}: `, score);
+      if (unfinished(s)) {
+        const note = document.createElement('span');
+        note.className = 'set-note';
+        note.textContent = ' ikke færdigspillet – sidste sæt';
+        text.append(note);
+      }
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'remove-set';
+      remove.textContent = '×';
+      remove.setAttribute('aria-label', `Fjern sæt ${i + 1}`);
+      remove.addEventListener('click', () => { sets.splice(i, 1); render(); });
+      row.append(text, remove);
+      return row;
+    }));
+    // A set nobody won can only be the last one: the match stopped there.
+    const last = sets[sets.length - 1];
+    pickerBox.hidden = sets.length >= MAX_SETS || (last !== undefined && unfinished(last));
+    title.textContent = `Sæt ${sets.length + 1}`;
+    picker.querySelectorAll('.score-btn').forEach(btn => {
+      btn.classList.toggle('selected', pending[btn.dataset.side] === btn.dataset.score);
+    });
+  }
+
+  picker.querySelectorAll('.score-btn').forEach(btn => btn.addEventListener('click', () => {
+    pending[btn.dataset.side] = btn.dataset.score;
+    if (pending.a !== undefined && pending.b !== undefined) {
+      sets.push([pending.a, pending.b]);
+      pending = {};
+    }
+    render();
+  }));
+
+  inputs.hidden = true;
+  picker.hidden = false;
+  render();
+})();
+</script>
 
   <button class="btn btn-block" type="submit">Gem kamp</button>
 </form>
