@@ -103,6 +103,16 @@ def test_players_are_reused_case_insensitively(logged_in):
     assert '<option value="anders">' not in form
 
 
+def test_players_with_danish_letters_are_reused(logged_in):
+    # SQL lower() only folds ASCII in SQLite (and depends on collation in Postgres), so Ø must match in Python.
+    for name in ("Øjvind", "øjvind", "ØJVIND"):
+        resp = logged_in.post("/ny", data={**MATCH, "a1": name}, follow_redirects=False)
+        assert resp.status_code == 303, name
+    form = logged_in.get("/ny").text
+    assert form.count('data-name="Øjvind"') + form.count('<option value="Øjvind">') >= 1
+    assert "øjvind" not in form and "ØJVIND" not in form
+
+
 def test_remembers_last_venue(logged_in):
     logged_in.post("/ny", data=MATCH)
     assert "<option selected>Ude</option>" in logged_in.get("/ny").text

@@ -49,7 +49,13 @@ def is_logged_in(request: Request):
 
 
 def get_or_create_player(session: Session, name: str) -> Player:
-    player = session.scalar(select(Player).where(func.lower(Player.name) == name.lower()))
+    """Find a player case-insensitively, or create one.
+
+    Compared in Python: SQL lower() only folds ASCII in SQLite and depends on the collation in Postgres,
+    so it would miss "Øjvind" vs "øjvind".
+    """
+    key = name.casefold()
+    player = next((p for p in session.scalars(select(Player)) if p.name.casefold() == key), None)
     if player is None:
         player = Player(name=name)
         session.add(player)
