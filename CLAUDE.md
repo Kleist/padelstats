@@ -2,9 +2,9 @@
 
 ## Project overview
 
-Padel stats static site generator. Fetches match data from Google Sheets, computes player statistics (leaderboard, Elo ratings, pair stats), and generates a single-page HTML site deployed to GitHub Pages.
+Padel stats web app (`app/`, FastAPI + Postgres on Fly.io): players enter results from their phone, and the landing page shows player statistics (leaderboard, Elo ratings, pair stats) computed live from the database. See `docs/PLAN.md` for the roadmap and `docs/SETUP.md` for hosting setup.
 
-A web app (`app/`) backed by Postgres is being built to replace the Sheet: players enter results from their phone. See `docs/PLAN.md` for the roadmap and `docs/SETUP.md` for hosting setup.
+The app is the source of truth. The old static site (`build.py`, built from a Google Sheet) is no longer deployed: GitHub Pages (`kleist.github.io/padelstats`) only forwards to the app.
 
 ## Architecture
 
@@ -77,9 +77,7 @@ Web app (GitHub secrets, synced to Fly by the deploy workflow): `DATABASE_URL`, 
 
 ## Deployment
 
-- **Production:** GitHub Actions deploys to GitHub Pages on push to `main` and daily at 06:00 UTC (`.github/workflows/deploy.yml`)
-- **PR preview:** Builds on pull requests and uploads artifact (`.github/workflows/preview.yml`)
-- **CI checks:** Lint (ruff) → Tests (pytest) → Build, in both workflows
+- **GitHub Pages:** `.github/workflows/deploy.yml` publishes `redirect/index.html` (as `index.html` and `404.html`, so every old link forwards) pointing at the Fly app; runs when `redirect/` or the workflow changes on `main`
 - **Web app:** `.github/workflows/app.yml` — lint → tests on Postgres → `alembic check` on every PR; on `main` deploys to Fly.io (`padelstats-kleist`), and on same-repo PRs to the shared staging app `padelstats-kleist-staging` (separate DB via `STAGING_DATABASE_URL`, wiped and restored from the latest nightly backup on each deploy, which tests the backups; the staging link is posted as a single, updated PR comment); both smoke-test `/healthz/db` for the new commit SHA. Deploys are skipped (with a warning) until `FLY_API_TOKEN` (and for staging `STAGING_DATABASE_URL`) is set.
 
 ## Commits & pull requests
