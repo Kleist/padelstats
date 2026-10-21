@@ -68,7 +68,7 @@ Proves the whole pipeline: phone → web app → database → automatic deploys.
 
 Done: the first production import (Oct 10) stored 31 matches with "Verification OK", and nightly backups run.
 
-Until cut-over, don't enter the same match in both the Sheet and the app — it would be counted twice.
+Since cut-over, matches are entered only in the app.
 
 ### Phase 2 — Stats in the app ✅ built
 
@@ -79,11 +79,11 @@ Until cut-over, don't enter the same match in both the Sheet and the app — it 
 
 **Done when:** after merging, the app's front page shows the same numbers as the static site (as long as no matches are entered only in the app).
 
-### Phase 3 — Cut over
+### Phase 3 — Cut over ✅ done
 
 - Stop entering data in the Sheet; the app is the source of truth.
-- `kleist.github.io/padelstats` redirects to the app (or keep it as a static mirror built from the database).
-- Optional: own domain (e.g. `padel.example.dk`) — Fly certificates are free.
+- `kleist.github.io/padelstats` redirects to the app: the Pages workflow publishes only a redirect page (also as `404.html`, so old deep links forward), and the static site is no longer built from the Sheet.
+- Not done, optional: own domain (e.g. `padel.example.dk`) — Fly certificates are free.
 
 ### Phase 4 — Nice to have
 
