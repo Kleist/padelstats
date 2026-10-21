@@ -1,10 +1,14 @@
 name: Deploy to GitHub Pages
 
+# The stats now live in the web app (Fly.io). GitHub Pages only forwards old
+# links (kleist.github.io/padelstats/...) to it.
+
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: '0 6 * * *'  # daily at 06:00 UTC
+    paths:
+      - 'redirect/**'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 permissions:
@@ -17,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -25,27 +29,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install poetry
-        run: pip install poetry
-
-      - name: Install dependencies
-        run: poetry install --no-root --extras dev
-
-      - name: Lint
-        run: poetry run ruff check .
-
-      - name: Test
-        run: poetry run pytest
-
-      - name: Build site
+      - name: Build redirect page
         env:
-          GOOGLE_SHEETS_API_KEY: ${{ secrets.GOOGLE_SHEETS_API_KEY }}
-          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
-        run: poetry run python build.py
+          APP_URL: https://${{ vars.FLY_APP || 'padelstats-kleist' }}.fly.dev/
+        run: |
+          mkdir dist
+          sed "s|__APP_URL__|$APP_URL|g" redirect/index.html > dist/index.html
+          # Pages serves 404.html for any other path, so old deep links forward too.
+          cp dist/index.html dist/404.html
 
       - uses: actions/configure-pages@v5
 

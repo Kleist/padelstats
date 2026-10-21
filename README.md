@@ -1,5 +1,5 @@
 # Padel Stats
 
-https://kleist.github.io/padelstats/
+https://padelstats-kleist.fly.dev/ — stats and entering results (the old https://kleist.github.io/padelstats/ forwards there).
 
-New web app for entering results (in progress): see [docs/PLAN.md](docs/PLAN.md) and [docs/SETUP.md](docs/SETUP.md).
+See [docs/PLAN.md](docs/PLAN.md) and [docs/SETUP.md](docs/SETUP.md).

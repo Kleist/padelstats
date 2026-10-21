@@ -55,7 +55,9 @@ Without `STAGING_DATABASE_URL`, the staging deploy is skipped with a warning.
 
 ## 6. Import the matches from the Google Sheet
 
-Uses the `GOOGLE_SHEETS_API_KEY` and `SPREADSHEET_ID` secrets the GitHub Pages site already uses.
+The app is now the source of truth and the Sheet is no longer used; this section is kept for reference. Re-running the import overwrites matches imported from the Sheet with the Sheet's current rows (matches entered in the app are never touched).
+
+Uses the `GOOGLE_SHEETS_API_KEY` and `SPREADSHEET_ID` secrets.
 
 1. Go to **Actions → Import from Google Sheet → Run workflow** (branch `main`, target `production`).
 2. Keep **Only show what would change** ticked the first time. The run summary lists new/updated rows, skipped rows with the reason (fix them in the Sheet), and whether the stats match.
