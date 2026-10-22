@@ -1,6 +1,6 @@
 """Parse sheet-style match rows and compute statistics (leaderboard, Elo, pairs).
 
-Shared by the static site build (build.py) and the web app (app/)."""
+Used by the web app (app/), which turns database matches into sheet-style rows."""
 
 from collections import defaultdict
 
