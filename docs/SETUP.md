@@ -49,23 +49,11 @@ Every pull request can deploy to a separate staging app, <https://padelstats-kle
 
 Each push to a PR then runs tests and deploys the PR to staging. Migrations run against the staging database only. The PR page shows a **View deployment** button, and the workflow posts the staging link as a PR comment (one comment per PR, updated on every staging deploy). Staging uses the same `ADMIN_PASSWORD` and has its own login cookie. There is only one staging app, so the most recently pushed PR is the one running there.
 
-Every staging deploy wipes the staging database and restores the latest nightly production backup into it (see 7. Backups). Each PR therefore starts from fresh production data, its migrations are tested against real data, and every PR checks that the backups can actually be restored: if the restore fails, the staging deploy fails. Anything entered on staging is lost on the next deploy. Until a backup exists, the staging deploy fails: run **Actions → Database backup** once, then re-run the failed job.
+Every staging deploy wipes the staging database and restores the latest nightly production backup into it (see 6. Backups). Each PR therefore starts from fresh production data, its migrations are tested against real data, and every PR checks that the backups can actually be restored: if the restore fails, the staging deploy fails. Anything entered on staging is lost on the next deploy. Until a backup exists, the staging deploy fails: run **Actions → Database backup** once, then re-run the failed job.
 
 Without `STAGING_DATABASE_URL`, the staging deploy is skipped with a warning.
 
-## 6. Import the matches from the Google Sheet
-
-The app is now the source of truth and the Sheet is no longer used; this section is kept for reference. Re-running the import overwrites matches imported from the Sheet with the Sheet's current rows (matches entered in the app are never touched).
-
-Uses the `GOOGLE_SHEETS_API_KEY` and `SPREADSHEET_ID` secrets.
-
-1. Go to **Actions → Import from Google Sheet → Run workflow** (branch `main`, target `production`).
-2. Keep **Only show what would change** ticked the first time. The run summary lists new/updated rows, skipped rows with the reason (fix them in the Sheet), and whether the stats match.
-3. Run it again with the box unticked to save. Re-run it any time until cut-over to pick up new Sheet rows.
-
-Target `staging` imports into the staging database instead (needs `STAGING_DATABASE_URL`).
-
-## 7. Backups
+## 6. Backups
 
 **Database backup** runs every night and stores a `pg_dump` of production as an artifact (kept 90 days): **Actions → Database backup → latest run → Artifacts**. Run it by hand once to check it works. Every staging deploy restores the latest backup, so a broken backup shows up as a failed staging deploy.
 If the repository is public, any logged-in GitHub user can download these artifacts. They hold only player names and results, which are public anyway.

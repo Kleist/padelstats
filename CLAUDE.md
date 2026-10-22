@@ -27,7 +27,6 @@ The app is the source of truth. The old static site (`build.py`, built from a Go
 - Player names on the match form are restricted to safe characters (`PLAYER_NAME` in `app/main.py`): the stats page's JavaScript builds HTML from them
 - Hosting: Fly.io (`fly.toml`, `Dockerfile`); migrations run as Fly `release_command`
 - `app/matches.py` — `db_matches()`: database matches as match dicts for `padel.stats` (sheet order first, then app-entered by date)
-- Sheet import: `app/sheet_import.py` + `scripts/import_sheet.py` (idempotent via `matches.sheet_row`, verifies stats DB == Sheet); run via the manual **Import from Google Sheet** workflow (`.github/workflows/import.yml`)
 - Backups: nightly `pg_dump` artifact (`.github/workflows/backup.yml`)
 
 ## Build & run
@@ -59,9 +58,6 @@ python tests/update_golden.py
 # Run the web app locally
 COOKIE_SECURE=0 ADMIN_PASSWORD=test poetry run alembic upgrade head
 COOKIE_SECURE=0 ADMIN_PASSWORD=test poetry run uvicorn app.main:app --reload
-
-# Import the Google Sheet into DATABASE_URL (needs the .env sheet variables); --dry-run writes nothing
-poetry run python scripts/import_sheet.py --dry-run
 
 # New migration after changing app/models.py
 poetry run alembic revision --autogenerate -m "describe change"
