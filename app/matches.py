@@ -7,14 +7,12 @@ from app.models import Match
 from padel.stats import parse_row
 
 
-def db_rows(session: Session, imported_only=False):
+def db_rows(session: Session):
     """All matches in the database as sheet-style rows, in the order the stats should process them.
 
     Sheet order is kept for imported matches; app-entered matches follow, by date.
     """
     query = select(Match).order_by(Match.sheet_row.is_(None), Match.sheet_row, Match.played_on, Match.id)
-    if imported_only:
-        query = query.where(Match.sheet_row.is_not(None))
     rows = []
     for m in session.scalars(query).unique():
         scores = [str(v) for s in m.sets for v in (s.games_a, s.games_b)]
@@ -22,6 +20,6 @@ def db_rows(session: Session, imported_only=False):
     return rows
 
 
-def db_matches(session: Session, imported_only=False):
+def db_matches(session: Session):
     """Match dicts (as from padel.stats.parse_matches) computed from the database."""
-    return [parse_row(row) for row in db_rows(session, imported_only)]
+    return [parse_row(row) for row in db_rows(session)]
